@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TrainFinder>
+	<NSApi>
+		<Username>user@example.com</Username>
+		<Password>Secret123#</Password>
+	</NSApi>
+
+</TrainFinder>
