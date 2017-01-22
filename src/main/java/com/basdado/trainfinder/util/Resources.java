@@ -24,6 +24,11 @@ import javax.cache.Caching;
 import javax.cache.spi.CachingProvider;
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.InjectionPoint;
+import javax.inject.Inject;
+
+import com.basdado.trainfinder.config.ConfigService;
+import com.basdado.trainfinder.ns.communicator.NSCommunicator;
+import com.basdado.trainfinder.ns.communicator.NSCommunicatorConfiguration;
 
 
 /**
@@ -32,6 +37,8 @@ import javax.enterprise.inject.spi.InjectionPoint;
  */
 public class Resources {
 
+	@Inject ConfigService configService;
+	
     @Produces
     public Logger produceLog(InjectionPoint injectionPoint) {
         return Logger.getLogger(injectionPoint.getMember().getDeclaringClass().getName());
@@ -53,4 +60,23 @@ public class Resources {
     	return manager;
     }
 
+    @Produces
+    public NSCommunicator produceNSCommunicator(InjectionPoint injectionPoint) {
+    	
+    	NSCommunicatorConfiguration nsCommunicatorConfig = new NSCommunicatorConfiguration() {
+			
+			@Override
+			public String getUsername() {
+				return configService.getNSAPIConfiguration().getUsername();
+			}
+			
+			@Override
+			public String getPassword() {
+				return configService.getNSAPIConfiguration().getPassword();
+			}
+		};
+		
+		return new NSCommunicator(nsCommunicatorConfig);
+    	
+    }
 }

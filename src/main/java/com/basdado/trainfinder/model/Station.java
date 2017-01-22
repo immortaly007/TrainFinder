@@ -8,15 +8,18 @@ public class Station implements Serializable {
 
 	private final String code;
 	
-	private final String name;
+	private final String shortName;
+	
+	private final String fullName;
 	
 	private final LatLonCoordinate location;
 	
 	private final String countryCode;
 
-	public Station(String code, String name, LatLonCoordinate location, String countryCode) {
+	public Station(String code, String shortName, String fullName, LatLonCoordinate location, String countryCode) {
 		this.code = code;
-		this.name = name;
+		this.shortName = shortName;
+		this.fullName = fullName;
 		this.location = location;
 		this.countryCode = countryCode;
 	}
@@ -29,8 +32,12 @@ public class Station implements Serializable {
 		return code;
 	}
 
-	public String getName() {
-		return name;
+	public String getShortName() {
+		return shortName;
+	}
+	
+	public String getFullName() {
+		return fullName;
 	}
 
 	public LatLonCoordinate getLocation() {

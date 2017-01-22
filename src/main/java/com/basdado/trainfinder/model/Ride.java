@@ -11,12 +11,14 @@ public class Ride {
 	
 	private final LocalDate startDate;
 	private final String rideCode;
+	private final Station destination;	
 	
 	private List<RideStop> stops;
 	
-	public Ride(LocalDate startDate, String rideCode) {
+	public Ride(LocalDate startDate, String rideCode, Station destination) {
 		this.startDate = startDate;
 		this.rideCode = rideCode;
+		this.destination = destination;
 		stops = new ArrayList<>();
 	}
 	
@@ -26,6 +28,10 @@ public class Ride {
 	
 	public String getRideCode() {
 		return rideCode;
+	}
+	
+	public Station getDestination() {
+		return destination;
 	}
 	
 	public List<RideStop> getStops() {
@@ -67,7 +73,7 @@ public class Ride {
 			builder.append(", stops: ");
 		}
 		for (RideStop stop : stops) {
-			builder.append(stop.getStation().getName() + "(" + stop.getDepartureTime().format(DateTimeFormatter.ISO_LOCAL_TIME) + 
+			builder.append(stop.getStation().getShortName() + "(" + stop.getDepartureTime().format(DateTimeFormatter.ISO_LOCAL_TIME) + 
 					(stop.getDelay() != null && !stop.getDelay().isZero() ? "+" + stop.getDelay().toString() : "") + ")");
 			builder.append(", ");
 		}

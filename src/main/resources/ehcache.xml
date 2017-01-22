@@ -13,11 +13,30 @@
 		<key-type>java.lang.String</key-type>
 		<value-type>java.util.Collection</value-type>
 	</cache-template>
+	
+	<cache-template name="stationCache">
+		<key-type>java.lang.String</key-type>
+		<value-type>com.basdado.trainfinder.model.Station</value-type>
+	</cache-template>
 
 	<cache alias="stationCollectionCache" uses-template="collectionCache">
 		<expiry>
 			<ttl unit="minutes">60</ttl>
 		</expiry>
 		<heap unit="entries">100</heap>
+	</cache>
+	
+	<cache alias="stationByNameCache" uses-template="stationCache">
+		<expiry>
+			<ttl unit="minutes">180</ttl>
+		</expiry>
+		<heap unit="entries">2000</heap>
+	</cache>
+	
+	<cache alias="stationByCodeCache" uses-template="stationCache">
+		<expiry>
+			<ttl unit="minutes">180</ttl>
+		</expiry>
+		<heap unit="entries">1000</heap>
 	</cache>
 </config>

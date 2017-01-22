@@ -24,6 +24,7 @@ public class NSDeparturesRepo implements DeparturesRepository {
 	private static final Logger logger = LoggerFactory.getLogger(NSDeparturesRepo.class);
 	
 	@Inject NSCommunicator communicator;
+	@Inject StationRepository nsStationRepo;
 	
 	@Override
 	public Collection<Departure> getDeparturesAt(Station station) {
@@ -36,9 +37,10 @@ public class NSDeparturesRepo implements DeparturesRepository {
 			return Collections.emptyList();
 		}
 		
+		
 		return departureInfoResponse.getDepartures().stream()
 				.map(d ->
-					new Departure(station, d.getRideNumber(), d.getDepartureTime(), d.getDelay(), d.getTrack())
+					new Departure(station, nsStationRepo.getStationWithName(d.getDestination()), d.getRideNumber(), d.getDepartureTime(), d.getDelay(), d.getTrack())
 				).collect(Collectors.toList());
 		
 	}

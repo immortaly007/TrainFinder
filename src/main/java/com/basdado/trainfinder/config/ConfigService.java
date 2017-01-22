@@ -12,8 +12,6 @@ import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
 import org.apache.commons.configuration2.io.AbsoluteNameLocationStrategy;
 import org.apache.commons.configuration2.io.ClasspathLocationStrategy;
-import org.apache.commons.configuration2.io.FileLocationStrategy;
-import org.apache.commons.configuration2.io.FileLocator;
 import org.apache.commons.configuration2.tree.MergeCombiner;
 import org.apache.commons.configuration2.tree.NodeCombiner;
 import org.slf4j.Logger;

@@ -53,7 +53,7 @@ public class TrainTrackingController {
 		
 		for(Station station: stations) {
 			
-			logger.info("Getting departures at " + station.getName());
+			logger.info("Getting departures at " + station.getFullName());
 			
 			final Collection<Departure> departures = departuresRepo.getDeparturesAt(station);
 			
@@ -102,7 +102,7 @@ public class TrainTrackingController {
 					RideStop lastKnownStop = rideTomorrow.getStops().get(rideTomorrow.getStops().size() - 1);
 					if (lastKnownStop.getDepartureTime().isBefore(maximumRideEnd)) {
 						// if we actually found a wrongly categorized ride, we need a new one.
-						Ride newRide = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber());
+						Ride newRide = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination());
 						rides.remove(rkTomorrow);
 						for(RideStop s: rideTomorrow.getStops()) {
 							newRide.addStop(new RideStop(s.getStation(), s.getDepartureTime(), s.getDelay(), s.getTrack()));
@@ -118,7 +118,7 @@ public class TrainTrackingController {
 		
 		if (ride == null) {
 			// If we still haven't been able to find the ride, it doesn't exist yet, so we create it
-			ride = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber());
+			ride = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination());
 			rides.put(new RideKey(ride), ride);
 		}
 		
