@@ -4,7 +4,7 @@ public interface NSCommunicatorConfiguration {
 	
 	static final String DEFAULT_STATION_LIST_REQUEST_URL = "https://webservices.ns.nl/ns-api-stations-v2";
 	static final String DEFAULT_DEPARTURES_REQUEST_URL = "https://webservices.ns.nl/ns-api-avt?station=${station}";
-	static final String DEFAULT_TRAVEL_ADVICE_REQUEST_URL = "https://webservices.ns.nl/ns-api-avt?${parameters}";
+	static final String DEFAULT_TRAVEL_ADVICE_REQUEST_URL = "https://webservices.ns.nl/ns-api-treinplanner?${parameters}";
 	
 	/**
 	 * @return The NS provided username, required to access the API.
@@ -39,5 +39,5 @@ public interface NSCommunicatorConfiguration {
 	 */
 	default String getTravelAdviceRequestUrl() {
 		return DEFAULT_TRAVEL_ADVICE_REQUEST_URL;
-	}	
+	}
 }

@@ -19,9 +19,9 @@ import com.basdado.trainfinder.ns.model.DepartureInfoResponse;
 
 @Stateless
 @Local(DeparturesRepository.class)
-public class NSDeparturesRepo implements DeparturesRepository {
+public class NSDeparturesRepository implements DeparturesRepository {
 
-	private static final Logger logger = LoggerFactory.getLogger(NSDeparturesRepo.class);
+	private static final Logger logger = LoggerFactory.getLogger(NSDeparturesRepository.class);
 	
 	@Inject NSCommunicator communicator;
 	@Inject StationRepository nsStationRepo;

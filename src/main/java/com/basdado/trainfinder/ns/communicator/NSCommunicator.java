@@ -107,6 +107,16 @@ public class NSCommunicator {
 		return doNSGetRequest(config.getTravelAdviceRequestUrl().replace("${parameters}", queryParams), TravelAdviceResponse.class);
 	}
 	
+	/**
+	 * Similar to {@link #getTravelAdvice(String, String, String, int, int, OffsetDateTime, boolean, boolean, boolean)}, but
+	 * some values are not passed so the defaults will be used
+	 * @param fromStation The station from which the travel starts
+	 * @param toStation The destination.
+	 * @param dateTime The time at which the travel should depart/arrive
+	 * @param departure Decides wether dateTime is a departure (true) or arrival (false) time
+	 * @return A travel advice response
+	 * @throws NSException
+	 */
 	public TravelAdviceResponse getTravelAdvice(String fromStation, String toStation, OffsetDateTime dateTime, boolean departure) throws NSException {
 		
 		List<NameValuePair> params = new ArrayList<>();

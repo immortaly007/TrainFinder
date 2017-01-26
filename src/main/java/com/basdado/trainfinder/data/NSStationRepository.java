@@ -1,5 +1,6 @@
 package com.basdado.trainfinder.data;
 
+import java.text.Normalizer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
@@ -11,6 +12,9 @@ import javax.ejb.Local;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.basdado.trainfinder.model.LatLonCoordinate;
 import com.basdado.trainfinder.model.Station;
 import com.basdado.trainfinder.ns.communicator.NSCommunicator;
@@ -20,6 +24,8 @@ import com.basdado.trainfinder.ns.model.StationInfoResponse;
 @Stateless
 @Local(StationRepository.class)
 public class NSStationRepository implements StationRepository {
+	
+	private static final Logger logger = LoggerFactory.getLogger(NSStationRepository.class);
 
 	@Inject private NSCommunicator nsCommunicator;
 	@Inject private CacheManager cacheManager;
@@ -56,8 +62,8 @@ public class NSStationRepository implements StationRepository {
 			
 			stationCollectionCache.put(NS_STATION_COLLECTION_CACHE_KEY, Collections.unmodifiableCollection(nsStations));
 			
-			nsStations.forEach(s -> stationByNameCache.put(s.getFullName(), s));
-			nsStations.forEach(s -> stationByNameCache.put(s.getShortName(), s));
+			nsStations.forEach(s -> stationByNameCache.put(simplifyName(s.getFullName()), s));
+			nsStations.forEach(s -> stationByNameCache.put(simplifyName(s.getShortName()), s));
 			nsStations.forEach(s -> stationByCodeCache.put(s.getCode(), s));
 		}
 		
@@ -83,6 +89,11 @@ public class NSStationRepository implements StationRepository {
 				station = stations.stream().filter(s -> s.getCode().equals(code)).findFirst().orElse(null);
 			}
 		}
+		
+		if (station == null) {
+			logger.warn("Could not find station with code: " + code);
+		}
+		
 		return station;
 	}
 
@@ -90,16 +101,37 @@ public class NSStationRepository implements StationRepository {
 	public Station getStationWithName(String name) {
 		if (name == null) return null;
 		
-		Station station = stationByNameCache.get(name);
+		String nameKey = simplifyName(name);
+		
+		Station station = stationByNameCache.get(nameKey);
 		if (station == null) {
 			Collection<Station> stations = getStations();
-			station = stationByNameCache.get(name);
+			station = stationByNameCache.get(nameKey);
 			if (station == null) { // Maybe the cache doesn't work, try to find it in the returned stations collections
-				station = stations.stream().filter(s -> name.equals(s.getShortName()) || name.equals(s.getFullName())).findFirst().orElse(null);
+				station = stations.stream().filter(s -> 
+						nameKey.equals(simplifyName(s.getShortName())) || 
+						nameKey.equals(simplifyName(s.getFullName())))
+						.findFirst().orElse(null);
 			}
 		}
 		
+		if (station == null) {
+			logger.warn("Could not find station with name: " + name);
+		}
+		
 		return station;
+	}
+	
+	/**
+	 * Simplifies the name, making it all uppercase and replacing all non-letter non-number symbols (whitespace etc)
+	 * @param name
+	 * @return
+	 */
+	public String simplifyName(String name) {
+		String simplified = Normalizer.normalize(name, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
+		simplified = simplified.toUpperCase();
+		simplified = simplified.replaceAll("[^A-Z0-9]", "");
+		return simplified;
 	}
 
 }

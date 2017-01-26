@@ -1,6 +1,7 @@
 package com.basdado.trainfinder.model;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,6 +40,10 @@ public class Ride {
 		return Collections.unmodifiableList(stops);
 	}
 	
+	/**
+	 * Adds the stop to this ride. If a stop at the given station already exists it will be overriden. 
+	 * @param newStop
+	 */
 	public void addStop(RideStop newStop) {
 		
 		if (newStop == null) return;
@@ -53,22 +58,81 @@ public class Ride {
 		}
 		
 		// Find the first departure after the new one
+		int nextStopIdx = getNextStopIndex(newStop.getDepartureTime());		
+		stops.add(nextStopIdx, newStop);
+		
+	}
+	
+	private int getNextStopIndex(OffsetDateTime time) {
+		
 		int nextStopIdx = 0;
 		for(RideStop s : stops) {
-			if (s.getDepartureTime().isAfter(newStop.getDepartureTime())) {
+			if (s.getDepartureTime().isAfter(time)) {
 				break;
 			}
 			nextStopIdx++;
 		}
+		return nextStopIdx;
+	}
+	
+	/**
+	 * @return The last stop of which the details (departure time etc.) are known. Not necessarily the same as the final destination.
+	 */
+	public RideStop getLastKnownStop() {
 		
-		int newDepartureIdx = nextStopIdx == 0 ? 0 : nextStopIdx;
-		stops.add(newDepartureIdx, newStop);
+		if (stops == null || stops.isEmpty()) return null;
+		return stops.get(stops.size() - 1);
+	}
+	
+	/**
+	 * @param time
+	 * @return The last stop the train departed from (given the time). Will return the final destination if this ride is over. Does not account for delays. 
+	 */
+	public RideStop getPreviousStop(OffsetDateTime time) {
 		
+		if (stops == null || stops.isEmpty()) return null;
+		
+		int nextStopIdx = getNextStopIndex(time);
+		if (nextStopIdx == 0) return null;
+		return stops.get(nextStopIdx - 1);
+	}
+	
+	/**
+	 * @param time
+	 * @return The next stop the train arrives at given a time, or null if the given time is after the last known stop. Returns the first stop if this ride
+	 * hasn't departed yet. Does not account for delays. 
+	 */
+	public RideStop getNextStop(OffsetDateTime time) {
+		
+		if (stops == null || stops.isEmpty()) return null;
+		
+		int nextStopIdx = getNextStopIndex(time);
+		if (nextStopIdx == stops.size()) {
+			return null;
+		} else {
+			return stops.get(nextStopIdx);
+		}
+		
+	}
+	
+	public RideStop getStopBefore(RideStop stop) {
+		
+		int idx = stops.indexOf(stop);
+		if (idx <= 0) return null;
+		return stops.get(idx - 1);
+		
+	}
+	
+	public RideStop getStopAfter(RideStop stop) {
+		
+		int idx = stops.indexOf(stop);
+		if (idx == -1 || idx + 1 >= stops.size()) return null;
+		return stops.get(idx + 1);
 	}
 	
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder("Ride " + getRideCode() + " on " + getStartDate());
+		StringBuilder builder = new StringBuilder("Ride " + getRideCode() + " on " + getStartDate() + " to " + (getDestination() == null ? "unknown" : getDestination().getShortName()));
 		if (!stops.isEmpty()) {
 			builder.append(", stops: ");
 		}

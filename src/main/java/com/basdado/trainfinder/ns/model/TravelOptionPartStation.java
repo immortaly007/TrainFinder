@@ -8,6 +8,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
+import com.basdado.trainfinder.ns.xml.NSOffsetDateTimeXmlAdapter;
 import com.basdado.trainfinder.ns.xml.TravelAdviceDelayMinutesXmlAdapter;
 
 @XmlRootElement(name="ReisStop")
@@ -18,6 +19,7 @@ public class TravelOptionPartStation {
 	private String name;
 	
 	@XmlElement(name="Tijd")
+	@XmlJavaTypeAdapter(NSOffsetDateTimeXmlAdapter.class)
 	private OffsetDateTime time;
 	
 	@XmlElement(name="VertrekVertraging")
