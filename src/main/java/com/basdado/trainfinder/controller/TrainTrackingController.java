@@ -81,7 +81,7 @@ public class TrainTrackingController {
 		lastUpdateTimes = new HashMap<>();
 	}
 	
-	@Schedule(hour="*",minute="0,5,10,15,25,30,35,40,45,50,55")
+	@Schedule(hour="*",minute="*/5")
 	public void RefreshDepartures() {
 		
 		Collection<Station> stations = getStations();
