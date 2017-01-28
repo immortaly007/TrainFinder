@@ -3,7 +3,6 @@ package com.basdado.trainfinder.config;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
-import javax.enterprise.inject.Produces;
 
 import org.apache.commons.configuration2.CombinedConfiguration;
 import org.apache.commons.configuration2.XMLConfiguration;
@@ -17,14 +16,13 @@ import org.apache.commons.configuration2.tree.NodeCombiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.basdado.trainfinder.ns.communicator.NSCommunicatorConfiguration;
-
 @Singleton
 public class ConfigService {
 
 	private final Logger logger = LoggerFactory.getLogger(ConfigService.class);
 	
 	private NSAPIConfiguration nsApiConfig;
+	private OpenStreetMapConfiguration openStreetMapConfig;
 	
 	@PostConstruct
 	public void init() {
@@ -68,12 +66,16 @@ public class ConfigService {
 		config.addConfiguration(defaultConfig);
 		
 		nsApiConfig = new NSAPIConfiguration(config);
+		openStreetMapConfig = new OpenStreetMapConfiguration(config);
 		
 	}
 	
-	@Produces
-	public NSCommunicatorConfiguration getNSAPIConfiguration() {
+	public NSAPIConfiguration getNSAPIConfiguration() {
 		return nsApiConfig;
+	}
+	
+	public OpenStreetMapConfiguration getOpenStreetMapConfiguration() {
+		return openStreetMapConfig;
 	}
 	
 }

@@ -23,10 +23,9 @@
     <artifactId>trainfinder</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>war</packaging>
-    <name>WildFly Quickstarts: trainfinder</name>
-    <description>A starter Java EE 7 webapp project for use on JBoss WildFly / WildFly, generated from the jboss-javaee6-webapp archetype</description>
+    <name>TrainFinder</name>
 
-    <url>http://wildfly.org</url>
+    <url>https://github.com/immortaly007/trainfinder</url>
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -34,6 +33,14 @@
             <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
         </license>
     </licenses>
+    
+    <repositories>
+    	<repository>
+    		<id>osm4j</id>
+    		<name>Repository for osm4j</name>
+    		<url>http://mvn.topobyte.de</url>
+    	</repository>
+    </repositories>
 
     <properties>
         <!-- Explicitly declaring the source encoding eliminates the following 
@@ -142,6 +149,19 @@
 			    <groupId>commons-beanutils</groupId>
 			    <artifactId>commons-beanutils</artifactId>
 			    <version>1.9.3</version>
+			</dependency>
+			
+			<!-- Libraries for OSM parsing -->
+			<dependency>
+				<groupId>de.topobyte</groupId>
+				<artifactId>osm4j-core</artifactId>
+				<version>0.0.18</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>de.topobyte</groupId>
+				<artifactId>osm4j-xml</artifactId>
+				<version>0.0.3</version>
 			</dependency>
 			
         </dependencies>
@@ -294,6 +314,16 @@
 		    <groupId>commons-beanutils</groupId>
 		    <artifactId>commons-beanutils</artifactId>
 		</dependency>
+		
+		<dependency>
+			<groupId>de.topobyte</groupId>
+			<artifactId>osm4j-core</artifactId>
+		</dependency>
+		
+		<dependency>
+			<groupId>de.topobyte</groupId>
+			<artifactId>osm4j-xml</artifactId>
+		</dependency>
     </dependencies>
 
 
@@ -367,4 +397,5 @@
         </profile>
 
     </profiles>
+    <description>A web service that can be used to find out which train a user is in given it's location.</description>
 </project>

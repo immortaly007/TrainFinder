@@ -1,10 +1,8 @@
 package com.basdado.trainfinder.config;
 
-import org.apache.commons.configuration2.*;
+import org.apache.commons.configuration2.Configuration;
 
-import com.basdado.trainfinder.ns.communicator.NSCommunicatorConfiguration;
-
-public class NSAPIConfiguration implements NSCommunicatorConfiguration {
+public class NSAPIConfiguration {
 
 	private final String username;
 	private final String password;
@@ -14,12 +12,10 @@ public class NSAPIConfiguration implements NSCommunicatorConfiguration {
 		this.password = config.getString("NSApi.Password");
 	}
 	
-	@Override
 	public String getUsername() {
 		return this.username;
 	}
 
-	@Override
 	public String getPassword() {
 		return this.password;
 	}

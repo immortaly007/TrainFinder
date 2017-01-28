@@ -4,5 +4,9 @@
 		<Username>user@example.com</Username>
 		<Password>Secret123#</Password>
 	</NSApi>
+	
+	<OpenStreetMap>
+		<RailroadFile>railroads.osm</RailroadFile>
+	</OpenStreetMap>
 
 </TrainFinder>
