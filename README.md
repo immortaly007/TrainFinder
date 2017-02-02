@@ -4,13 +4,22 @@ Trainfinder
 
 This is a web service that utilizes the NS (Dutch public transport provider) public API to try to find out which train a user currently is in. The user input is a coordinate (latitude, longitude) and optionally a direction in which the user is traveling.
 
-The service creates a model of all public trains currently active in the netherlands and their location. Note that this model will be simplified for now (e.g. train tracks are straight lines between stations, the train speed is assumed to be constant between stations).
+The service creates a model of all public trains currently active in the Netherlands and their location. Note that this model will be simplified for now (e.g. the train speed is assumed to be constant between stations).
 
-How to install
----------------
+Prerequisites
+-------------
+In order to run the application you need to provide two sources of information:
+
+ * __[NS public API](http://www.ns.nl/reisinformatie/ns-api) credentials__: you need to get a username and password for API access, which you can acquire [here](http://www.ns.nl/ews-aanvraagformulier/).
+ * __Railway map of the Netherlands__: An [OpenStreetMap](http://www.openstreetmap.org/) XML (.osm) containing (at least) the railways in the Netherlands (`railway=rail` tag on OpenStreetMap). The smaller the file is, the faster it is to process. The easiest way to get a file with just railway tracks in the Netherlands is using the Overpass API:<br>
+	<http://www.overpass-api.de/api/xapi?way[railway=rail][bbox=3.33984,50.53438,7.6355,53.67068]>
+    
+
+Configuration
+-------------
 This service is originally aimed created for running on a JBoss/WildFly server. It should be portable to other servers (maybe with minor changes), but I haven't tested this.
 
-In order to connect to the NS public API, you need provide a username and password. This should be provided in the WildFly/JBoss configuration dir (the folder where you put `standalone.xml`):
+You need to provide your [NS public API](http://www.ns.nl/reisinformatie/ns-api) username and password and the location of the railway map file. Configuration is stored in the WildFly/JBoss configuration directory (the folder where you put `standalone.xml`):
 ```
 wildfly-10.1.0.Final/standalone/configuration
 ```
@@ -26,11 +35,18 @@ Which should have the following content:
 		<Username>your@email.com</Username>
 		<Password>NS.Provided.Password</Password>
 	</NSApi>
+    <OpenStreetMap>
+    	<RailroadFile>/path/to/your/railway-map.osm</RailroadFile>
+    </OpenStreetMap>
 </TrainFinder>
 ```
-Where you should replace `your@email.com` and `NS.Provided.Password` by your login details.
+Where you should replace `your@email.com` and `NS.Provided.Password` by your NS API credentials, and `/path/to/your/railway-map.osm` by the path to tour railway map.
 
-Now build the repository (`mvn clean package`) and deploy the generated `trainfinder.war` (in the `target` directory) to your application server (either by placing it in `wildfly-10.1.0.Final/standalone/deployments` or by using WildFly/JBoss CLI).
+Running the application
+-----------------------
+Build the repository (`mvn clean package`) and deploy the generated `trainfinder.war` (found in the `target` directory) to your application server (either by placing it in `wildfly-10.1.0.Final/standalone/deployments` or by using WildFly/JBoss CLI).
+
+When you start the server, it should start reading the railway map and polling stations.
 
 How to use
 ----------

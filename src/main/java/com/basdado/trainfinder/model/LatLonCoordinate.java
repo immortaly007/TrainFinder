@@ -33,4 +33,9 @@ public class LatLonCoordinate implements Serializable {
 		
 	}
 	
+	@Override
+	public String toString() {
+		return "[" + latitude + "," + longitude + "]";
+	}
+	
 }

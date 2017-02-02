@@ -31,11 +31,13 @@ import com.basdado.trainfinder.model.Ride;
 import com.basdado.trainfinder.model.RideKey;
 import com.basdado.trainfinder.model.RideStop;
 import com.basdado.trainfinder.model.Station;
+import com.basdado.trainfinder.model.Train;
 import com.basdado.trainfinder.model.TravelAdvice;
 import com.basdado.trainfinder.model.TravelAdviceOption;
 import com.basdado.trainfinder.model.TravelAdviceOptionPart;
 import com.basdado.trainfinder.model.TravelAdviceOptionPartStop;
 import com.basdado.trainfinder.util.ObjectUtil;
+import com.basdado.trainfinder.util.PathHelper;
 
 @Singleton
 @Startup
@@ -70,6 +72,7 @@ public class TrainTrackingController {
 	@Inject StationRepository stationRepo;
 	@Inject DeparturesRepository departuresRepo;
 	@Inject TravelAdviceRepository travelAdviceRepo;
+	@Inject TrainRoutingController trainRoutes;	
 	
 	private Map<RideKey, Ride> rides;
 	private Map<Station, OffsetDateTime> nextUpdateTimes;
@@ -81,11 +84,56 @@ public class TrainTrackingController {
 		lastUpdateTimes = new HashMap<>();
 	}
 	
+
+	public Collection<Train> getCurrentTrains() {
+		
+		List<Train> res = new ArrayList<>();
+		OffsetDateTime now = OffsetDateTime.now();
+		for (Ride ride : rides.values()) {
+			if (ride == null || ride.getFirstKnownStop() == null) continue; // no information about this ride
+			
+			if (between(ride.getFirstKnownStop().getActualDepartureTime(), ride.getLastKnownStop().getActualDepartureTime(), now)) {
+				
+				RideStop previousStop = ride.getPreviousStop(now);
+				RideStop nextStop = ride.getNextStop(now);
+				if (previousStop == null || nextStop == null) {
+					logger.warn("Previous or next stop not found at " + now + "  for ride: " + ride);
+					continue;
+				}
+				List<LatLonCoordinate> trainRailwayPath = trainRoutes.getRailway(previousStop.getStation(), nextStop.getStation());
+				double f = ((double)(nextStop.getActualDepartureTime().toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond())) /
+						((double)(now.toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond()));
+				
+				LatLonCoordinate currentTrainPosition = PathHelper.getPointAt(trainRailwayPath, f);
+				
+				Train train = new Train();
+				train.setDepartureStation(previousStop.getStation());
+				train.setActualDepartureTime(previousStop.getActualDepartureTime());
+				train.setPlannedDepartureTime(previousStop.getDepartureTime());
+				train.setArrivalStation(nextStop.getStation());
+				train.setActualArrivalTime(nextStop.getActualDepartureTime());
+				train.setPlannedArrivalTime(nextStop.getDepartureTime());
+				train.setPosition(currentTrainPosition);
+				train.setRideCode(ride.getRideCode());
+				
+				res.add(train);
+			}
+		}
+		
+		return res;
+		
+		
+	}
+	
+	
 	@Schedule(hour="*",minute="*/5")
 	public void RefreshDepartures() {
 		
 		Collection<Station> stations = getStations();
 		Collection<Station> stationsWorthUpdating = stations.stream().filter(s -> isStationWorthUpdating(s)).collect(Collectors.toList());
+		
+		List<LatLonCoordinate> railwayPath = trainRoutes.getRailway(stationRepo.getStationWithName("Weert"), stationRepo.getStationWithName("Eindhoven"));
+		logger.info("Found path from Heerlen to Vlissingen: " + String.join(",", railwayPath.stream().map(r -> "[" + r.getLongitude() + "," + r.getLatitude() + "]").collect(Collectors.toList())));
 		
 		for(Station station: stationsWorthUpdating) {
 
@@ -377,6 +425,10 @@ public class TrainTrackingController {
 	
 	private static boolean between(double min, double max, double x) {
 		return x >= min && x <= max;
+	}
+	
+	public static boolean between(OffsetDateTime min, OffsetDateTime max, OffsetDateTime x) {
+		return (x.isAfter(min) || x.isEqual(min)) && x.isBefore(max);
 	}
 	
 }

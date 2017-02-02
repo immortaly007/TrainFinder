@@ -6,7 +6,17 @@
 	</NSApi>
 	
 	<OpenStreetMap>
-		<RailroadFile>railroads.osm</RailroadFile>
+		<!-- 
+		Path to an OSM file containing the railway network of the Netherlands.
+		Such a file can be obtained from the Overpass XAPI:
+		http://www.overpass-api.de/api/xapi?way[railway=rail][bbox=3.33984,50.53438,7.6355,53.67068]
+		 -->
+		<RailroadFile>railway.osm</RailroadFile>
+		
+		<!-- The preferred distance a station "node" may be from the reported station location by the NS. If no node is found within this distance, max distance is used -->
+		<PreferredStationToTrackDistance>50</PreferredStationToTrackDistance>
+		<!-- The max distance a station "node" may be from the reported station location by the NS -->
+		<MaxStationToTrackDistance>100</MaxStationToTrackDistance>
 	</OpenStreetMap>
 
 </TrainFinder>

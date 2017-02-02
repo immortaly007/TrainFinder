@@ -36,4 +36,12 @@ public class RideStop implements Serializable {
 	public String getTrack() {
 		return track;
 	}
+	
+	public OffsetDateTime getActualDepartureTime() {
+		OffsetDateTime actualDepartureTime = departureTime;
+		if (delay != null && !delay.isZero()) {
+			actualDepartureTime = actualDepartureTime.plus(delay);
+		}
+		return actualDepartureTime;
+	}
 }

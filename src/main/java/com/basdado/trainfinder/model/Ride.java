@@ -85,6 +85,14 @@ public class Ride {
 	}
 	
 	/**
+	 * @return The first stop of which details are known.
+	 */
+	public RideStop getFirstKnownStop() {
+		if (stops == null || stops.isEmpty()) return null;
+		return stops.get(0);
+	}
+	
+	/**
 	 * @param time
 	 * @return The last stop the train departed from (given the time). Will return the final destination if this ride is over. Does not account for delays. 
 	 */
