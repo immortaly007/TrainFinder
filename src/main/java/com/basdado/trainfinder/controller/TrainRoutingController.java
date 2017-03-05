@@ -4,7 +4,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -30,8 +29,9 @@ import com.basdado.trainfinder.config.OpenStreetMapConfiguration;
 import com.basdado.trainfinder.model.LatLonCoordinate;
 import com.basdado.trainfinder.model.OsmRailwayMap;
 import com.basdado.trainfinder.model.OsmRailwayMap.OsmRailwayMapNode;
-import com.basdado.trainfinder.util.CoordinateUtil;
+import com.basdado.trainfinder.model.Railway;
 import com.basdado.trainfinder.model.Station;
+import com.basdado.trainfinder.util.CoordinateUtil;
 
 import de.topobyte.osm4j.core.access.OsmHandler;
 import de.topobyte.osm4j.core.access.OsmInputException;
@@ -45,7 +45,7 @@ import de.topobyte.osm4j.xml.dynsax.OsmXmlReader;
 @Singleton
 public class TrainRoutingController {
 	
-	private static final String RAILWAY_PATH_CACHE_KEY = "railwayPathCache";
+	private static final String RAILWAY_CACHE_KEY = "railwayPathCache";
 	
 	private static final Logger logger = LoggerFactory.getLogger(TrainRoutingController.class);
 	
@@ -55,9 +55,8 @@ public class TrainRoutingController {
 	private OsmRailwayMap railwayMap;
 	private Map<String, Boolean> nodesAddedNearStation;
 	
-	private Cache<String, List<LatLonCoordinate>> pathCache;
+	private Cache<String, Railway> railwayCache;
 	
-	@SuppressWarnings("unchecked")
 	@PostConstruct
 	private void init() {
 		
@@ -83,11 +82,11 @@ public class TrainRoutingController {
 		
 		logger.info("Railway map was read succesfully, using " + railwayMap.getNodes().size() + " nodes");
 		
-		pathCache = (Cache<String, List<LatLonCoordinate>>)(Cache<?,?>) // Some casting magic...
-				cacheManager.getCache(RAILWAY_PATH_CACHE_KEY, String.class, List.class);
+		railwayCache = (Cache<String, Railway>)
+				cacheManager.getCache(RAILWAY_CACHE_KEY, String.class, Railway.class);
 	}
 	
-	public List<LatLonCoordinate> getRailway(Station from, Station to) {
+	public Railway getRailway(Station from, Station to) {
 		
 		if (nodesAddedNearStation.get(from.getCode()) == null || !nodesAddedNearStation.get(from.getCode())) {
 			addNodesOnTracksNear(from.getLocation());
@@ -99,33 +98,32 @@ public class TrainRoutingController {
 			nodesAddedNearStation.put(to.getCode(), true);
 		}
 		
-		List<LatLonCoordinate> res = pathCache.get(getCacheKey(from, to));
+		Railway res = railwayCache.get(getCacheKey(from, to));
 		if (res == null) {
 			// Try to get it from the inverse path:
-			List<LatLonCoordinate> inverseRes = pathCache.get(getCacheKey(to, from));
+			Railway inverseRes = railwayCache.get(getCacheKey(to, from));
 			if (inverseRes != null) {
-				res = new ArrayList<LatLonCoordinate>(inverseRes);
-				Collections.reverse(res);
+				res = inverseRes.reversed();
 			}
 		}
 		if (res == null) {
 			// Actually calculate it
 			logger.info("Calculating path from station " + from.getShortName() + "(" + from.getCode() + ") to " + to.getShortName() + "(" + to.getCode() + ").");
-			res = getPath(from.getLocation(), to.getLocation());
-			pathCache.put(getCacheKey(from, to), Collections.unmodifiableList(res));
-			
+			List<Long> pathNodes = calculateShortestPathBetween(from.getLocation(), to.getLocation());
+			if (pathNodes != null) {
+				res = generateRailway(pathNodes, from, to);
+				railwayCache.put(getCacheKey(from, to), res);
+			}
 		}
 		
-		return getPath(from.getLocation(), to.getLocation());
+		return res;
 	}
 	
 	private String getCacheKey(Station from, Station to) {
 		return from.getCode() + "-" + to.getCode();
 	}
 	
-	private List<LatLonCoordinate> getPath(LatLonCoordinate from, LatLonCoordinate to) {
-		
-		Map<Long, OsmRailwayMapNode> nodes = railwayMap.getNodes();
+	private List<Long> calculateShortestPathBetween(LatLonCoordinate from, LatLonCoordinate to) {
 		
 		List<Long> sourceNodes = findNodesNear(from);
 		if (sourceNodes.isEmpty()) {
@@ -143,14 +141,45 @@ public class TrainRoutingController {
 		}
 		
 		for (Long sourceNodeId : sourceNodes) {
-			List<Long> pathNodes = getPath(sourceNodeId, destNodes);			
-			if (pathNodes != null) {
-				return pathNodes.stream().map(p -> nodes.get(p).getPosition()).collect(Collectors.toList());
+			List<Long> pathNodes = calculateShortestPathBetween(sourceNodeId, destNodes);
+			if (pathNodes != null && !pathNodes.isEmpty()) {
+				return pathNodes;
 			}
 		}
 		
 		return null;
 	}
+	
+	private Railway generateRailway(List<Long> pathNodes, Station from, Station to) {
+		
+		LatLonCoordinate[] path = new LatLonCoordinate[pathNodes.size()];
+		double[] distanceUntil = new double[pathNodes.size()];
+		Long previousPathNodeId = null;
+		OsmRailwayMapNode previousPathNode = null;
+		int i = 0;
+		
+		for (Long pathNodeId : pathNodes) {
+			
+			OsmRailwayMapNode pathNode = railwayMap.getNode(pathNodeId);
+			path[i] = pathNode.getPosition();
+			if (i == 0) {
+				distanceUntil[i] = 0;
+			} else {
+				double distanceToPreviousNode = pathNode.isConnectedTo(previousPathNodeId) ?
+						pathNode.getDistanceToConnectedNode(previousPathNodeId) :
+						CoordinateUtil.dist(pathNode.getPosition(), previousPathNode.getPosition());
+				
+				distanceUntil[i] = distanceUntil[i - 1] + distanceToPreviousNode;
+			}
+			
+			previousPathNodeId = pathNodeId;
+			previousPathNode = pathNode;
+			i++;
+		}
+		
+		return new Railway(path, distanceUntil, from, to);
+	}
+	
 	
 	/**
 	 * Uses Dijkstra algorithm to find the shortest path from the source node to one of the destination nodes. 
@@ -158,7 +187,7 @@ public class TrainRoutingController {
 	 * @param destNodes
 	 * @return
 	 */
-	private List<Long> getPath(Long sourceNodeId, Set<Long> destNodes) {
+	private List<Long> calculateShortestPathBetween(Long sourceNodeId, Set<Long> destNodes) {
 		
 		Map<Long, Double> dist = new HashMap<>();
 		Map<Long, Long> prev = new HashMap<>();

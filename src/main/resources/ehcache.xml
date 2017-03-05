@@ -24,6 +24,11 @@
 		<value-type>java.util.List</value-type>
 	</cache-template>
 
+	<cache-template name="railwayCache">
+		<key-type>java.lang.String</key-type>
+		<value-type>com.basdado.trainfinder.model.Railway</value-type>
+	</cache-template>
+
 	<cache alias="stationCollectionCache" uses-template="collectionCache">
 		<expiry>
 			<ttl unit="minutes">60</ttl>
@@ -45,7 +50,7 @@
 		<heap unit="entries">1000</heap>
 	</cache>
 	
-	<cache alias="railwayPathCache" uses-template="listCache">
+	<cache alias="railwayPathCache" uses-template="railwayCache">
 		<expiry>
 			<ttl unit="minutes">360</ttl>
 		</expiry>

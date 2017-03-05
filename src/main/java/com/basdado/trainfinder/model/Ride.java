@@ -3,10 +3,10 @@ package com.basdado.trainfinder.model;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Ride {
 	
@@ -20,7 +20,7 @@ public class Ride {
 		this.startDate = startDate;
 		this.rideCode = rideCode;
 		this.destination = destination;
-		stops = new ArrayList<>();
+		stops = new CopyOnWriteArrayList<>();
 	}
 	
 	public LocalDate getStartDate() {
@@ -35,9 +35,9 @@ public class Ride {
 		return destination;
 	}
 	
-	public List<RideStop> getStops() {
+	public Collection<RideStop> getStops() {
 		// Don't allow editing departures directly
-		return Collections.unmodifiableList(stops);
+		return Collections.unmodifiableCollection(stops);
 	}
 	
 	/**
@@ -48,18 +48,22 @@ public class Ride {
 		
 		if (newStop == null) return;
 		
+		boolean stopFound = false;
+		int i = 0;
 		// If we already have a departure for the given station is this ride, we remove is so we can replace it by our new departure
-		for(Iterator<RideStop> stopIt = stops.iterator(); stopIt.hasNext();) {
-			
-			RideStop s = stopIt.next();
+		for(RideStop s : stops) {
 			if (s.getStation().equals(newStop.getStation())) {
-				stopIt.remove();
+				stopFound = true;
+				stops.set(i, newStop);
 			}
+			i++;
 		}
 		
 		// Find the first departure after the new one
-		int nextStopIdx = getNextStopIndex(newStop.getDepartureTime());		
-		stops.add(nextStopIdx, newStop);
+		if (!stopFound) {
+			int nextStopIdx = getNextStopIndex(newStop.getDepartureTime());		
+			stops.add(nextStopIdx, newStop);
+		}
 		
 	}
 	

@@ -12,7 +12,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import com.basdado.trainfinder.controller.TrainTrackingController;
+import com.basdado.trainfinder.controller.TrainStatusFacade;
 import com.basdado.trainfinder.data.StationRepository;
 import com.basdado.trainfinder.model.Station;
 import com.basdado.trainfinder.model.Train;
@@ -28,7 +28,7 @@ public class TrainFinderRESTService {
     private Logger logger;
 	
 	@Inject private StationRepository stationRepository;
-	@Inject private TrainTrackingController trainTracker;
+	@Inject private TrainStatusFacade trainStatusFacade;
 
     @GET
     @Path("/{lat:[0-9]*.?[0-9]*}-{lon:[0-9]*.?[0-9]*}")
@@ -51,6 +51,6 @@ public class TrainFinderRESTService {
     @Path("getTrains")
     @Produces(MediaType.APPLICATION_JSON)
     public Collection<Train> getTrains() {
-    	return trainTracker.getCurrentTrains();
+    	return trainStatusFacade.getCurrentTrains();
     }
 }

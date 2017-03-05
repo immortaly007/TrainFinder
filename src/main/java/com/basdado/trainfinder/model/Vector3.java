@@ -1,5 +1,7 @@
 package com.basdado.trainfinder.model;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 public class Vector3 {
 	
 	private final double x;
@@ -52,5 +54,14 @@ public class Vector3 {
 		
 		Vector3 v = (Vector3)obj;
 		return this.x == v.x && this.y == v.y && this.z == v.z;
+	}
+	
+	@Override
+	public int hashCode() {
+		return new HashCodeBuilder()
+				.append(x)
+				.append(y)
+				.append(z)
+				.build();
 	}
 }

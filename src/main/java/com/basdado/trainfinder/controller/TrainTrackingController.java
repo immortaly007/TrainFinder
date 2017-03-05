@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -28,16 +27,13 @@ import com.basdado.trainfinder.exception.TravelAdviceException;
 import com.basdado.trainfinder.model.Departure;
 import com.basdado.trainfinder.model.LatLonCoordinate;
 import com.basdado.trainfinder.model.Ride;
-import com.basdado.trainfinder.model.RideKey;
 import com.basdado.trainfinder.model.RideStop;
 import com.basdado.trainfinder.model.Station;
-import com.basdado.trainfinder.model.Train;
 import com.basdado.trainfinder.model.TravelAdvice;
 import com.basdado.trainfinder.model.TravelAdviceOption;
 import com.basdado.trainfinder.model.TravelAdviceOptionPart;
 import com.basdado.trainfinder.model.TravelAdviceOptionPartStop;
 import com.basdado.trainfinder.util.ObjectUtil;
-import com.basdado.trainfinder.util.PathHelper;
 
 @Singleton
 @Startup
@@ -48,7 +44,7 @@ public class TrainTrackingController {
 	private static final LatLonCoordinate STATION_FILTER_MAX = new LatLonCoordinate(51.777160, 6.4139832);
 	private static final LatLonCoordinate STATION_FILTER_MIN = new LatLonCoordinate(50.649176, 4.58460);
 	
-	private static final Duration MAXIMUM_RIDE_LENGTH = Duration.ofHours(8);
+
 	/**
 	 * The duration before a train reaches the stop before the final destination, at which we start querying the final stop arrival time.s 
 	 */
@@ -73,67 +69,22 @@ public class TrainTrackingController {
 	@Inject DeparturesRepository departuresRepo;
 	@Inject TravelAdviceRepository travelAdviceRepo;
 	@Inject TrainRoutingController trainRoutes;	
+	@Inject TrainRideDataManager trainRideDataManager;
 	
-	private Map<RideKey, Ride> rides;
 	private Map<Station, OffsetDateTime> nextUpdateTimes;
 	private Map<Station, OffsetDateTime> lastUpdateTimes;
 	
 	public TrainTrackingController() {
-		rides = new HashMap<>();
 		nextUpdateTimes = new HashMap<>();
 		lastUpdateTimes = new HashMap<>();
 	}
 	
-
-	public Collection<Train> getCurrentTrains() {
-		
-		List<Train> res = new ArrayList<>();
-		OffsetDateTime now = OffsetDateTime.now();
-		for (Ride ride : rides.values()) {
-			if (ride == null || ride.getFirstKnownStop() == null) continue; // no information about this ride
-			
-			if (between(ride.getFirstKnownStop().getActualDepartureTime(), ride.getLastKnownStop().getActualDepartureTime(), now)) {
-				
-				RideStop previousStop = ride.getPreviousStop(now);
-				RideStop nextStop = ride.getNextStop(now);
-				if (previousStop == null || nextStop == null) {
-					logger.warn("Previous or next stop not found at " + now + "  for ride: " + ride);
-					continue;
-				}
-				List<LatLonCoordinate> trainRailwayPath = trainRoutes.getRailway(previousStop.getStation(), nextStop.getStation());
-				double f = ((double)(nextStop.getActualDepartureTime().toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond())) /
-						((double)(now.toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond()));
-				
-				LatLonCoordinate currentTrainPosition = PathHelper.getPointAt(trainRailwayPath, f);
-				
-				Train train = new Train();
-				train.setDepartureStation(previousStop.getStation());
-				train.setActualDepartureTime(previousStop.getActualDepartureTime());
-				train.setPlannedDepartureTime(previousStop.getDepartureTime());
-				train.setArrivalStation(nextStop.getStation());
-				train.setActualArrivalTime(nextStop.getActualDepartureTime());
-				train.setPlannedArrivalTime(nextStop.getDepartureTime());
-				train.setPosition(currentTrainPosition);
-				train.setRideCode(ride.getRideCode());
-				
-				res.add(train);
-			}
-		}
-		
-		return res;
-		
-		
-	}
 	
-	
-	@Schedule(hour="*",minute="*/5")
+	@Schedule(hour="*",minute="*/5", persistent=false)
 	public void RefreshDepartures() {
 		
 		Collection<Station> stations = getStations();
 		Collection<Station> stationsWorthUpdating = stations.stream().filter(s -> isStationWorthUpdating(s)).collect(Collectors.toList());
-		
-		List<LatLonCoordinate> railwayPath = trainRoutes.getRailway(stationRepo.getStationWithName("Weert"), stationRepo.getStationWithName("Eindhoven"));
-		logger.info("Found path from Heerlen to Vlissingen: " + String.join(",", railwayPath.stream().map(r -> "[" + r.getLongitude() + "," + r.getLatitude() + "]").collect(Collectors.toList())));
 		
 		for(Station station: stationsWorthUpdating) {
 
@@ -142,7 +93,7 @@ public class TrainTrackingController {
 			final Collection<Departure> departures = departuresRepo.getDeparturesAt(station);
 			
 			for (Departure departure : departures) {
-				Ride ride = getRide(departure);
+				Ride ride = trainRideDataManager.findOrCreateRide(departure);
 				ride.addStop(new RideStop(departure.getStation(), departure.getDepartureTime(), departure.getDelay(), departure.getTrack()));
 			}
 			
@@ -157,7 +108,8 @@ public class TrainTrackingController {
 		// We can't get the time at the destination station from the departures alone.
 		// Therefore, when a ride for which the time at the final station is not known is reaching the last known station,
 		// we get a travel advice from the last known stop till the final destination, which should gives us the required details
-		for (Ride ride : rides.values()) {
+		List<Ride> rides = trainRideDataManager.getRides();
+		for (Ride ride : rides) {
 			OffsetDateTime now = OffsetDateTime.now();
 			RideStop lastKnownStop = ride.getLastKnownStop();
 			RideStop nextStop = ride.getNextStop(now);
@@ -174,13 +126,12 @@ public class TrainTrackingController {
 			}
 		}
 		
-		List<Ride> sortedRides = rides.values().stream().sorted((r1, r2) -> r1.getRideCode().compareTo(r2.getRideCode())).collect(Collectors.toList());
+		List<Ride> sortedRides = rides.stream().sorted((r1, r2) -> r1.getRideCode().compareTo(r2.getRideCode())).collect(Collectors.toList());
 		for (Ride ride: sortedRides) {
 			logger.info("Found ride: " + ride);
 		}
 		
 		cleanNextUpdateTimes();
-		cleanRides();
 	}
 	
 	private void cleanNextUpdateTimes() {
@@ -195,32 +146,7 @@ public class TrainTrackingController {
 		
 		toRemove.forEach(s -> nextUpdateTimes.remove(s));
 	}
-	
-	private void cleanRides() {
-		
-		List<RideKey> inactiveRides = new ArrayList<>();
-		
-		OffsetDateTime oldestAllowedRide = OffsetDateTime.now().minus(MAXIMUM_RIDE_LENGTH);
-		
-		for (Entry<RideKey, Ride> rideKeyValuePair : rides.entrySet()) {
-			
-			RideKey rideKey = rideKeyValuePair.getKey();
-			Ride ride = rideKeyValuePair.getValue();
-			
-			RideStop lastStop = ride.getLastKnownStop();
-			
-			if (lastStop == null || // If we were not able to find any stops for a ride, then just remove it (probably never happens, saveguard)
-					lastStop.getDepartureTime().isBefore(oldestAllowedRide) // or if the last stop was longer ago than the MAXIMUM_RIDE_LENGTH
-					) { 
-				inactiveRides.add(rideKey);
-			}
-		}
-		
-		for (RideKey inactiveRideKey : inactiveRides) {
-			rides.remove(inactiveRideKey);
-		}
-		
-	}
+
 	
 	private void setNextUpdateTime(Station station, OffsetDateTime time) {
 		if (!nextUpdateTimes.containsKey(station) || nextUpdateTimes.get(station).isBefore(time)) {
@@ -257,7 +183,8 @@ public class TrainTrackingController {
 		boolean worthUpdating = false;
 
 		// If there are no trains which within 5 minutes will have this station as the next station, then this station is not worth updating.
-		for (Ride ride : rides.values()) {
+		List<Ride> rides = trainRideDataManager.getRides();
+		for (Ride ride : rides) {
 			
 			Optional<RideStop> optionalStopAtThisStation = ride.getStops().stream().filter(s -> s.getStation().equals(station)).findFirst();
 			
@@ -341,71 +268,7 @@ public class TrainTrackingController {
 		}
 	}
 	
-	private Ride getRide(Departure departure) {
-		
-		// RideNumber/RideCode is unique each day. We have to find out however if the ride started yesterday or today
-		
-		RideKey rk = new RideKey(departure.getDepartureTime().toLocalDate(), departure.getRideNumber());
-		Ride ride = rides.get(rk);
-		if (ride == null) { 
-			// Maybe the ride started yesterday
-			OffsetDateTime minimumRideStart = departure.getDepartureTime().minus(MAXIMUM_RIDE_LENGTH);
-			if (!minimumRideStart.toLocalDate().equals(departure.getDepartureTime().toLocalDate())) {
-				RideKey rkYesterday = new RideKey(minimumRideStart.toLocalDate(), departure.getRideNumber());
-				ride = rides.get(rkYesterday);
-				
-				if (ride != null && !ride.getStops().isEmpty()) {
-					if (ride.getStops().get(0).getDepartureTime().isBefore(minimumRideStart)) {
-						// If this ride was indeed yesterday, but it started way before the current departure, then this is not our ride
-						ride = null;
-					}
-				}
-			}
-		}
-		
-		if (ride == null) {
-			// Maybe our ride started at the end of the day, and another departure has registered this ride under the wrong ride key (i.e. for tomorrow)
-			OffsetDateTime maximumRideEnd = departure.getDepartureTime().plus(MAXIMUM_RIDE_LENGTH);
-			if (!maximumRideEnd.toLocalDate().equals(departure.getDepartureTime().toLocalDate())) {
-				RideKey rkTomorrow = new RideKey(maximumRideEnd.toLocalDate(), departure.getRideNumber());
-				Ride rideTomorrow = rides.get(rkTomorrow);
-				
-				if (rideTomorrow != null && !rideTomorrow.getStops().isEmpty()) {
-					RideStop lastKnownStop = rideTomorrow.getStops().get(rideTomorrow.getStops().size() - 1);
-					if (lastKnownStop.getDepartureTime().isBefore(maximumRideEnd)) {
-						// if we actually found a wrongly categorized ride, we need a new one.
-						Ride newRide = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination());
-						rides.remove(rkTomorrow);
-						for(RideStop s: rideTomorrow.getStops()) {
-							newRide.addStop(s);
-						}
-						rides.put(new RideKey(newRide), newRide);
-						ride = newRide;
-					}
-				}
-			}
-		}		
-		
-		if (ride == null) {
-			// If we still haven't been able to find the ride, it doesn't exist yet, so we create it
-			ride = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination());
-			rides.put(new RideKey(ride), ride);
-		}
-		
-		// Sometimes ride destination are unclear at some when queried from some stations (e.g. when the train splits into another ride)
-		// but at other stations are clear. In this case we need to replace the ride with the missing destination by one with a correct destination:
-		if (ride != null && ride.getDestination() == null && departure.getFinalDestination() != null) {
-			
-			Ride newRide = new Ride(ride.getStartDate(), ride.getRideCode(), departure.getFinalDestination());
-			for (RideStop s : ride.getStops()) {
-				newRide.addStop(s);
-			}
-			rides.put(new RideKey(newRide), newRide); // override existing ride
-			ride = newRide;			
-		}
-		
-		return ride;
-	}
+
 	
 	@PostConstruct
 	public void init() {
@@ -427,8 +290,6 @@ public class TrainTrackingController {
 		return x >= min && x <= max;
 	}
 	
-	public static boolean between(OffsetDateTime min, OffsetDateTime max, OffsetDateTime x) {
-		return (x.isAfter(min) || x.isEqual(min)) && x.isBefore(max);
-	}
+
 	
 }

@@ -2,6 +2,8 @@ package com.basdado.trainfinder.model;
 
 import java.io.Serializable;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 public class LatLonCoordinate implements Serializable {
 
 	private static final long serialVersionUID = 1L;
@@ -30,6 +32,12 @@ public class LatLonCoordinate implements Serializable {
 		
 		LatLonCoordinate other = (LatLonCoordinate)obj;
 		return this.getLatitude() == other.getLatitude() && this.getLongitude() == other.getLongitude();
+		
+	}
+	
+	@Override
+	public int hashCode() {
+		return new HashCodeBuilder().append(latitude).append(longitude).build();
 		
 	}
 	

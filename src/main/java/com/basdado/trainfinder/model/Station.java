@@ -61,4 +61,9 @@ public class Station implements Serializable {
 		return this.code.equals(other.getCode());
 	}
 	
+	@Override
+	public int hashCode() {
+		return this.code.hashCode();
+	}
+	
 }

@@ -44,20 +44,19 @@ public class Resources {
         return Logger.getLogger(injectionPoint.getMember().getDeclaringClass().getName());
     }
     
-    @Produces
+    @SuppressWarnings("resource") // Even though the cachingProvider is closeable, it needs to be reused so actually closing it causes problems.
+	@Produces
     public CacheManager produceCacheManager(InjectionPoint injectionPoint) {
     	
-    	CachingProvider cachingProvider = Caching.getCachingProvider();
-    	CacheManager manager;
-		try {
-			manager = cachingProvider.getCacheManager( 
+    	try {
+    		CachingProvider cachingProvider = Caching.getCachingProvider();
+    		CacheManager manager = cachingProvider.getCacheManager( 
 			    injectionPoint.getMember().getDeclaringClass().getClassLoader().getResource("ehcache.xml").toURI(), 
 			    injectionPoint.getMember().getDeclaringClass().getClassLoader());
+			return manager;
 		} catch (URISyntaxException e) {
 			throw new RuntimeException(e);
 		} 
-    	
-    	return manager;
     }
 
     @Produces

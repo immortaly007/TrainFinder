@@ -159,6 +159,10 @@ public class OsmRailwayMap {
 			return connections;
 		}
 		
+		public Double getDistanceToConnectedNode(long connectedNodeId) {
+			return connections.get(connectedNodeId);
+		}
+		
 		public boolean isReachable(long nodeId) {
 			return connections.containsKey(nodeId);
 		}
@@ -169,6 +173,10 @@ public class OsmRailwayMap {
 		
 		public void removeConnection(long nodeId) {
 			connections.remove(nodeId);
+		}
+		
+		public boolean isConnectedTo(long otherNodeId) {
+			return connections.containsKey(otherNodeId);
 		}
 		
 		public boolean hasConnections() {
