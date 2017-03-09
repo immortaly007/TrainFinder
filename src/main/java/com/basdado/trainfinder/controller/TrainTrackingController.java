@@ -26,6 +26,7 @@ import com.basdado.trainfinder.data.TravelAdviceRepository.TimeType;
 import com.basdado.trainfinder.exception.TravelAdviceException;
 import com.basdado.trainfinder.model.Departure;
 import com.basdado.trainfinder.model.LatLonCoordinate;
+import com.basdado.trainfinder.model.Railway;
 import com.basdado.trainfinder.model.Ride;
 import com.basdado.trainfinder.model.RideStop;
 import com.basdado.trainfinder.model.Station;
@@ -84,6 +85,10 @@ public class TrainTrackingController {
 	public void RefreshDepartures() {
 		
 		Collection<Station> stations = getStations();
+		
+		Railway rw = trainRoutes.getRailway(stationRepo.getStationWithCode("HRT"), stationRepo.getStationWithCode("BR"));
+		logger.info("Found railway: "  + rw);
+		
 		Collection<Station> stationsWorthUpdating = stations.stream().filter(s -> isStationWorthUpdating(s)).collect(Collectors.toList());
 		
 		for(Station station: stationsWorthUpdating) {

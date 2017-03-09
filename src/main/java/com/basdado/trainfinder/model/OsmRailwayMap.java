@@ -4,9 +4,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.Validate;
@@ -14,16 +17,34 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.basdado.trainfinder.util.CoordinateUtil;
+import com.basdado.trainfinder.util.SparseGrid;
 
 import de.topobyte.osm4j.core.model.iface.OsmNode;
 import de.topobyte.osm4j.core.model.iface.OsmWay;
 
 public class OsmRailwayMap {
 	
-	private Map<Long, OsmRailwayMapNode> nodes;
+	private static final double TILE_SIZE = 0.1;
+	
+	private final Map<Long, OsmRailwayMapNode> nodes;
+	private final GeoGrid<Set<Long>> grid;
+	
+	/**
+	 * Cache for the longest distance between two nodes on the map.
+	 */
+	private double longestNodeConnectionDistance;
+	/**
+	 * Cache for the two nodes between which the longest distance on the map exists.
+	 */
+	private Pair<Long, Long> longestNodeConnection;
+	
+	// TODO add acceleration structure on the nodes to improve the performance of #findNodesNear()
+	// e.g. construct a grid, and store which node are in each grid tile. Then you only have to search nodes in the nearest grid tiles.
 	
 	public OsmRailwayMap() {
 		nodes = new HashMap<>();
+		grid = new GeoGrid<>(TILE_SIZE);
+		longestNodeConnectionDistance = 0;
 	}
 	
 	/**
@@ -36,6 +57,14 @@ public class OsmRailwayMap {
 	
 	public void addNode(Long id, OsmRailwayMapNode node) {
 		nodes.put(id, node);
+		
+		// Update the grid
+		Set<Long> tile = grid.getTileAt(node.getPosition());
+		if (tile == null) {
+			tile = new HashSet<>();
+			grid.setTileAt(node.getPosition(), tile);
+		}
+		tile.add(id);
 	}
 	
 	/**
@@ -74,6 +103,10 @@ public class OsmRailwayMap {
 			double dist = CoordinateUtil.dist(lastNode.getPosition(), node.getPosition());
 			lastNode.addConnection(nodeId, dist);
 			node.addConnection(lastNodeId, dist);
+			if (dist > longestNodeConnectionDistance) {
+				longestNodeConnectionDistance = dist;
+				longestNodeConnection = Pair.of(nodeId, lastNodeId);
+			}
 			
 			// Update the last node
 			lastNodeId = nodeId;
@@ -81,16 +114,42 @@ public class OsmRailwayMap {
 		}
 	}
 	
+	public void removeConnection(Long node1Id, Long node2Id) {
+		
+		nodes.get(node1Id).removeConnection(node2Id);
+		nodes.get(node2Id).removeConnection(node1Id);
+		
+		if (longestNodeConnection.equals(Pair.of(node1Id, node2Id)) || longestNodeConnection.equals(Pair.of(node2Id, node1Id))) {
+			updateLongestNodeDist();
+		}
+	}
+	
 	/**
-	 * Removes nodes that are not part of ways
+	 * Removes nodes that are not part of ways (don't have any connections).
 	 */
 	public void clean() {
 		
-		for(Iterator<Map.Entry<Long, OsmRailwayMapNode>> nodeIterator = nodes.entrySet().iterator(); nodeIterator.hasNext();) {
-			Map.Entry<Long, OsmRailwayMapNode> nodeEntry = nodeIterator.next();
+		List<Long> nodesToRemove = new LinkedList<>();
+		for(Map.Entry<Long, OsmRailwayMapNode> nodeEntry : nodes.entrySet()) {
 			if (!nodeEntry.getValue().hasConnections()) {
-				nodeIterator.remove();
+				nodesToRemove.add(nodeEntry.getKey());
 			}
+		}
+		
+		for (Long nodeId : nodesToRemove) {
+			removeNode(nodeId);
+		}
+	}
+	
+	public void removeNode(Long nodeId) {
+		OsmRailwayMapNode node = nodes.remove(nodeId);
+		if (node != null) {
+			Set<Long> nodeTile = grid.getTileAt(node.getPosition());
+			nodeTile.remove(nodeId);
+		}
+		for (Long connectedNodeId : node.getConnections().keySet()) {
+			OsmRailwayMapNode connectedNode = nodes.get(connectedNodeId);
+			connectedNode.removeConnection(nodeId);
 		}
 	}
 	
@@ -110,12 +169,49 @@ public class OsmRailwayMap {
 	 */
 	public List<Long> findNodesNear(LatLonCoordinate pos, double maxDistance) {
 		
+		int centerX = grid.calculateHorizontalTileIdx(pos);
+		int centerY = grid.calculateVerticalTileIdx(pos);
+		
+		int minTileX = centerX - 1;
+		while (grid.getDistanceToTile(pos, minTileX, centerY) < maxDistance) {
+			minTileX --;
+		}
+		
+		int maxTileX = centerX + 1;
+		while (grid.getDistanceToTile(pos, maxTileX, centerY) < maxDistance) {
+			maxTileX++;
+		}
+		
+		int minTileY = centerY - 1;
+		while (grid.getDistanceToTile(pos, centerX, minTileY) < maxDistance) {
+			minTileY --;
+		}
+		
+		int maxTileY = centerY + 1;
+		while (grid.getDistanceToTile(pos, centerX, maxTileY) < maxDistance) {
+			maxTileY++;
+		}
+		
 		List<Pair<Long, Double>> nearbyNodes = new ArrayList<>();
 		
-		for (Map.Entry<Long, OsmRailwayMapNode> nodeEntry: nodes.entrySet()) {
-			double dist = CoordinateUtil.dist(pos, nodeEntry.getValue().getPosition());
-			if (dist < maxDistance) {
-				nearbyNodes.add(new ImmutablePair<>(nodeEntry.getKey(), dist));
+		for (int x = minTileX + 1; x < maxTileX; x++) {
+			for (int y = minTileY + 1; y < maxTileY; y++) {
+				
+				Set<Long> tile = grid.getTile(x, y);
+				if (tile == null || tile.isEmpty()) {
+					continue;
+				} else {
+					
+					if (grid.getDistanceToTile(pos, x, y) < maxDistance) {
+						for (Long nodeId : tile) {
+							OsmRailwayMapNode node = getNode(nodeId);
+							double dist = CoordinateUtil.dist(pos, node.getPosition());
+							if (dist < maxDistance) {
+								nearbyNodes.add(new ImmutablePair<>(nodeId, dist));
+							}
+						}
+					}
+				}
 			}
 		}
 		
@@ -124,22 +220,30 @@ public class OsmRailwayMap {
 				.map(n -> n.getLeft()).collect(Collectors.toList()); // To list
 	}
 	
+	public double getLongestNodeConnectionDistance() {
+		return longestNodeConnectionDistance;
+	}
+	
 	/**
 	 * @return The longest distance between two neighboring nodes on the railway map.
 	 */
-	public double getLongestNodeDist() {
+	public void updateLongestNodeDist() {
 		
-		double maxDistance = 0;
-		for (OsmRailwayMapNode node : nodes.values()) {
+		longestNodeConnectionDistance = 0;
+		for (Map.Entry<Long, OsmRailwayMapNode> nodeEntry : nodes.entrySet()) {
+			OsmRailwayMapNode node = nodeEntry.getValue();
 			for (Map.Entry<Long, Double> c : node.getConnections().entrySet()) {
-				if (c.getValue() > maxDistance) {
-					maxDistance = c.getValue();
+				if (c.getKey() > nodeEntry.getKey() && // Only check connections in ascending order
+						c.getValue() > longestNodeConnectionDistance) {
+					longestNodeConnectionDistance = c.getValue();
+					longestNodeConnection = Pair.of(nodeEntry.getKey(), c.getKey());
 				}
 			}
 		}
-		return maxDistance;
+		
 	}
 	
+
 	
 	public static class OsmRailwayMapNode {
 		
@@ -156,7 +260,7 @@ public class OsmRailwayMap {
 		}
 		
 		public Map<Long, Double> getConnections() {
-			return connections;
+			return Collections.unmodifiableMap(connections);
 		}
 		
 		public Double getDistanceToConnectedNode(long connectedNodeId) {
@@ -167,11 +271,11 @@ public class OsmRailwayMap {
 			return connections.containsKey(nodeId);
 		}
 		
-		public void addConnection(long nodeId, double dist) {
+		protected void addConnection(long nodeId, double dist) {
 			connections.put(nodeId, dist);
 		}
 		
-		public void removeConnection(long nodeId) {
+		protected void removeConnection(long nodeId) {
 			connections.remove(nodeId);
 		}
 		
@@ -183,4 +287,5 @@ public class OsmRailwayMap {
 			return !connections.isEmpty();
 		}
 	}
+	
 }

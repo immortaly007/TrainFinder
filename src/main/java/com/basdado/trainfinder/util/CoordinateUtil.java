@@ -5,6 +5,11 @@ import com.basdado.trainfinder.model.Vector3;
 
 public class CoordinateUtil {
 	
+	public static final double MIN_LONGITUDE = -180;
+	public static final double MAX_LONGITUDE = 180;
+	public static final double MIN_LATITUDE = -90;
+	public static final double MAX_LATITUDE = 90;
+	
 	public static final double RADIUS_EARTH = 6371008.8f;
 	public static final double HALF_PI = Math.PI * 0.5;
 	
@@ -149,8 +154,8 @@ public class CoordinateUtil {
 	/**
 	 * Calculates the distance of point c3 to the path (orthodrome) between c1 and c2. Sometimes
 	 * referred to as the cross-track distance.
-	 * @param c1 The start of the track
-	 * @param c2 The end of the track
+	 * @param c1 The start of the path
+	 * @param c2 The end of the path
 	 * @param c3 The point for which the distance to the path is needed
 	 * @param R The radius of the object along which the distance should be calculated
 	 * @return The distance (great circle) between c3 and the path that spans between c1 and c2.
@@ -168,6 +173,12 @@ public class CoordinateUtil {
 		return crossTrackDist(c1, c2, c3, RADIUS_EARTH);
 	}
 	
+	/**
+	 * @param c1 The start of the track
+	 * @param c2 The end of the path
+	 * @param c3 The point for which the closest point on the path between c1 and c2 should be found.
+	 * @return The angular distance between c1 and the point on the path between c1 and c2 that lies closest to c3.
+	 */
 	public static double angularAlongTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3) {
 		
 		if (!similarDirection(bearing(c2, c1), bearing(c2, c3))) {
@@ -181,10 +192,23 @@ public class CoordinateUtil {
 
 	}
 	
+	/**
+	 * @param c1 The start of the track
+	 * @param c2 The end of the path
+	 * @param c3 The point for which the closest point on the path between c1 and c2 should be found.
+	 * @param 
+	 * @return The distance between c1 and the point on the path between c1 and c2 that lies closest to c3.
+	 */
 	public static double alongTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3, double R) {
 		return angularAlongTrackDist(c1, c2, c3) * R;
 	}
 	
+	/**
+	 * @param c1 The start of the track
+	 * @param c2 The end of the path
+	 * @param c3 The point for which the closest point on the path between c1 and c2 should be found.
+	 * @return The distance between c1 and the point on the path between c1 and c2 that lies closest to c3.
+	 */
 	public static double alongTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3) {
 		return alongTrackDist(c1, c2, c3, RADIUS_EARTH);
 	}

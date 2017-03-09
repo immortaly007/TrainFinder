@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +17,6 @@ import javax.cache.CacheManager;
 import javax.ejb.Singleton;
 import javax.inject.Inject;
 
-import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
 import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
@@ -32,6 +30,7 @@ import com.basdado.trainfinder.model.OsmRailwayMap.OsmRailwayMapNode;
 import com.basdado.trainfinder.model.Railway;
 import com.basdado.trainfinder.model.Station;
 import com.basdado.trainfinder.util.CoordinateUtil;
+import com.basdado.trainfinder.util.RailwayMapUtil;
 
 import de.topobyte.osm4j.core.access.OsmHandler;
 import de.topobyte.osm4j.core.access.OsmInputException;
@@ -141,7 +140,7 @@ public class TrainRoutingController {
 		}
 		
 		for (Long sourceNodeId : sourceNodes) {
-			List<Long> pathNodes = calculateShortestPathBetween(sourceNodeId, destNodes);
+			List<Long> pathNodes = RailwayMapUtil.calculateShortestPathBetween(railwayMap, sourceNodeId, destNodes);
 			if (pathNodes != null && !pathNodes.isEmpty()) {
 				return pathNodes;
 			}
@@ -181,77 +180,7 @@ public class TrainRoutingController {
 	}
 	
 	
-	/**
-	 * Uses Dijkstra algorithm to find the shortest path from the source node to one of the destination nodes. 
-	 * @param sourceNodeId
-	 * @param destNodes
-	 * @return
-	 */
-	private List<Long> calculateShortestPathBetween(Long sourceNodeId, Set<Long> destNodes) {
-		
-		Map<Long, Double> dist = new HashMap<>();
-		Map<Long, Long> prev = new HashMap<>();
-		Set<Long> toVisit = new HashSet<>(); // Should be replaced by a priority queue for more performance
-		Set<Long> visited = new HashSet<>();
 
-		dist.put(sourceNodeId, 0.0);
-		toVisit.add(sourceNodeId);
-		
-		boolean reachedDestination = false;
-		Long destNodeId = null;
-		while(!reachedDestination) {
-			
-			// Find the nearest (node with the smallest distance) unchecked node
-			Long uId = null;
-			Double uDist = Double.MAX_VALUE;
-			for (Long nodeId : toVisit) {
-				Double nodeDist = dist.get(nodeId);
-				Validate.notNull(nodeDist, "All nodes in the \"toVisit\" set should have a distance, but distance not found");
-				
-				if (nodeDist < uDist) {
-					uId = nodeId;
-					uDist = nodeDist;
-				}
-			}
-			if (uId == null) {
-				return null; // We checked all reachable nodes, but no path to a destination node was found
-			}
-			if (destNodes.contains(uId)) {
-				reachedDestination = true;
-				destNodeId = uId;
-			} else {
-			
-				OsmRailwayMapNode u = railwayMap.getNode(uId);
-				
-				Map<Long, Double> connections = u.getConnections();
-				for (Map.Entry<Long, Double> connection : connections.entrySet()) {
-					Long cId = connection.getKey();
-					Double cDist = connection.getValue();
-					Double newConnectionDistance = uDist + cDist;
-					Double curConnectionDistance = dist.get(cId);
-					if (curConnectionDistance == null || curConnectionDistance > newConnectionDistance) {
-						dist.put(cId, newConnectionDistance);
-						prev.put(cId, uId);
-					}
-					
-					if (!visited.contains(cId)) {
-						toVisit.add(cId);
-					}
-				}
-				
-				toVisit.remove(uId);
-				visited.add(uId);
-			}
-		}
-		
-		LinkedList<Long> result = new LinkedList<>();
-		Long curNodeId = destNodeId;
-		while(result.isEmpty() || result.getFirst() != sourceNodeId) {
-			result.addFirst(curNodeId);
-			curNodeId = prev.get(curNodeId);
-		}
-		return result;		
-	}
 	
 	private List<Long> findNodesNear(LatLonCoordinate pos) {
 		List<Long> preferredNodes = railwayMap.findNodesNear(pos, configService.getOpenStreetMapConfiguration().getPreferredStationToTrackDistance());
@@ -277,7 +206,7 @@ public class TrainRoutingController {
 	 */
 	private List<Long> addNodesOnTracksNear(LatLonCoordinate pos, double maxDist) {
 		
-		double trackNodeDistance = railwayMap.getLongestNodeDist() + maxDist;
+		double trackNodeDistance = railwayMap.getLongestNodeConnectionDistance() + maxDist;
 		List<Long> nearbyTrackNodes = railwayMap.findNodesNear(pos, trackNodeDistance);
 		
 		List<Triple<Long, Long, Long>> addedNodes = new ArrayList<>();
@@ -308,12 +237,7 @@ public class TrainRoutingController {
 			Long node2Id = addedNode.getMiddle();
 			Long newNodeId = addedNode.getRight();
 			
-			OsmRailwayMapNode node1 = railwayMap.getNode(node1Id);
-			OsmRailwayMapNode node2 = railwayMap.getNode(node2Id);
-			
-			node1.removeConnection(node2Id);
-			node2.removeConnection(node1Id);
-			
+			railwayMap.removeConnection(node1Id, node2Id);
 			railwayMap.addWay(Arrays.asList(node1Id, newNodeId, node2Id));
 		}
 		
