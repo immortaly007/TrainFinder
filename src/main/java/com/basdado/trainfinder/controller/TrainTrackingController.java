@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -26,7 +25,6 @@ import com.basdado.trainfinder.data.TravelAdviceRepository.TimeType;
 import com.basdado.trainfinder.exception.TravelAdviceException;
 import com.basdado.trainfinder.model.Departure;
 import com.basdado.trainfinder.model.LatLonCoordinate;
-import com.basdado.trainfinder.model.Railway;
 import com.basdado.trainfinder.model.Ride;
 import com.basdado.trainfinder.model.RideStop;
 import com.basdado.trainfinder.model.Station;
@@ -34,7 +32,6 @@ import com.basdado.trainfinder.model.TravelAdvice;
 import com.basdado.trainfinder.model.TravelAdviceOption;
 import com.basdado.trainfinder.model.TravelAdviceOptionPart;
 import com.basdado.trainfinder.model.TravelAdviceOptionPartStop;
-import com.basdado.trainfinder.util.ObjectUtil;
 
 @Singleton
 @Startup
@@ -44,12 +41,6 @@ public class TrainTrackingController {
 	
 	private static final LatLonCoordinate STATION_FILTER_MAX = new LatLonCoordinate(51.777160, 6.4139832);
 	private static final LatLonCoordinate STATION_FILTER_MIN = new LatLonCoordinate(50.649176, 4.58460);
-	
-
-	/**
-	 * The duration before a train reaches the stop before the final destination, at which we start querying the final stop arrival time.s 
-	 */
-	private static final Duration FINAL_DESTINATION_QUERY_TIME = Duration.ofMinutes(10);
 	
 	/**
 	 * The duration for which the departure times at a station will not be updated if the last update indicates that there are no departures
@@ -73,6 +64,9 @@ public class TrainTrackingController {
 	@Inject TrainRideDataManager trainRideDataManager;
 	
 	private Map<Station, OffsetDateTime> nextUpdateTimes;
+	/**
+	 * The last update time for each station
+	 */
 	private Map<Station, OffsetDateTime> lastUpdateTimes;
 	
 	public TrainTrackingController() {
@@ -84,12 +78,11 @@ public class TrainTrackingController {
 	@Schedule(hour="*",minute="*/5", persistent=false)
 	public void RefreshDepartures() {
 		
-		Collection<Station> stations = getStations();
-		
-		Railway rw = trainRoutes.getRailway(stationRepo.getStationWithCode("HRT"), stationRepo.getStationWithCode("BR"));
-		logger.info("Found railway: "  + rw);
-		
+		Collection<Station> stations = getStations();		
 		Collection<Station> stationsWorthUpdating = stations.stream().filter(s -> isStationWorthUpdating(s)).collect(Collectors.toList());
+		
+		logger.info("Found " + stationsWorthUpdating.size() + " stations worth updating: " + 
+				String.join(",", stationsWorthUpdating.stream().map(s -> s.getShortName()).collect(Collectors.toList())));
 		
 		for(Station station: stationsWorthUpdating) {
 
@@ -117,23 +110,23 @@ public class TrainTrackingController {
 		for (Ride ride : rides) {
 			OffsetDateTime now = OffsetDateTime.now();
 			RideStop lastKnownStop = ride.getLastKnownStop();
-			RideStop nextStop = ride.getNextStop(now);
+			RideStop nextStop = ride.getActualNextStop(now);
 			
 			if (lastKnownStop == null) continue; // If the ride doesn't have any stops, ignore it...
 			
-			OffsetDateTime actualLastKnownDeparture = lastKnownStop.getDepartureTime().plus(ObjectUtil.coalesce(lastKnownStop.getDelay(), Duration.ZERO));
+			OffsetDateTime actualLastKnownDeparture = lastKnownStop.getActualDepartureTime();
 			
 			if (lastKnownStop.getStation().equals(nextStop) || 
-					(actualLastKnownDeparture.isBefore(now.plus(FINAL_DESTINATION_QUERY_TIME)) && actualLastKnownDeparture.isAfter(now))) {
+					(actualLastKnownDeparture.isBefore(now.plus(STATION_UPDATE_OFFSET)) && actualLastKnownDeparture.isAfter(now))) {
 				
-				logger.info("Getting final stop for ride: " + ride);
+				logger.debug("Getting final stop for ride: " + ride);
 				tryGetFinalStopForRide(ride);
 			}
 		}
 		
 		List<Ride> sortedRides = rides.stream().sorted((r1, r2) -> r1.getRideCode().compareTo(r2.getRideCode())).collect(Collectors.toList());
 		for (Ride ride: sortedRides) {
-			logger.info("Found ride: " + ride);
+			logger.debug("Found ride: " + ride);
 		}
 		
 		cleanNextUpdateTimes();
@@ -189,33 +182,45 @@ public class TrainTrackingController {
 
 		// If there are no trains which within 5 minutes will have this station as the next station, then this station is not worth updating.
 		List<Ride> rides = trainRideDataManager.getRides();
-		for (Ride ride : rides) {
-			
-			Optional<RideStop> optionalStopAtThisStation = ride.getStops().stream().filter(s -> s.getStation().equals(station)).findFirst();
-			
-			if (optionalStopAtThisStation.isPresent()) {
-				
-				RideStop stopAtThisStation = optionalStopAtThisStation.get();
-				RideStop stopBefore = ride.getStopBefore(stopAtThisStation);
-				
-				if (stopBefore == null) {
-					// This station is the first stop in the current ride, so it's worth updating if this train is supposed to leave
-					// within STATION_UPDATE_OFFSET.
-					worthUpdating |= stopAtThisStation.getDepartureTime().isBefore(nowPlusUpdateOffset);
-					
-				} else { // Check if the train reaches the "stop before" within 5 minutes
-					worthUpdating |= stopBefore.getDepartureTime().isBefore(nowPlusUpdateOffset);
-				}				
-			}
-			
+		for (Ride ride : rides) {	
+			worthUpdating = isStationWorthUpdatingForRide(ride, station, now, nowPlusUpdateOffset);
 			if (worthUpdating) {
-				logger.info("Station " + station.getFullName() + " is worth updating because of ride: " + ride);
+				logger.debug("Station " + station.getFullName() + " is worth updating because of ride: " + ride);
 				break; // If we find it is worth updating, stop searching further and update already!
 			}
 		}
 				
 		return worthUpdating;
 		
+	}
+	
+	private boolean isStationWorthUpdatingForRide(Ride ride, Station station, OffsetDateTime now, OffsetDateTime nowPlusUpdateOffset) {
+		
+		RideStop stopAtThisStation = ride.getStopAt(station);
+		
+		if (
+				// If this ride doesn't stop at this station, then we don't need to update either:
+				stopAtThisStation != null &&
+				// We can't get information on the final stop from a standard update, so if this station
+				// is the final stop, then this ride doesn't make it worth updating the station:
+				!station.equals(ride.getDestination()) &&
+				// If the train hasn't already left this station
+				stopAtThisStation.getActualDepartureTime().isAfter(now)
+				) { 
+		
+			RideStop stopBefore = ride.getStopBefore(stopAtThisStation);
+			
+			if (stopBefore == null) {
+				// This station is the first stop in the current ride, so it's worth updating if this train is supposed to leave
+				// within STATION_UPDATE_OFFSET.
+				return stopAtThisStation.getActualDepartureTime().isBefore(nowPlusUpdateOffset);
+				
+			} else { 
+				// Check if the train reaches the "stop before" within STATION_UPDATE_OFFSET (5 minutes)
+				return stopBefore.getActualDepartureTime().isBefore(nowPlusUpdateOffset);
+			}
+		}
+		return false; // Found no reason to update the station
 	}
 
 	/**
@@ -238,7 +243,7 @@ public class TrainTrackingController {
 			try {
 				TravelAdvice advice = travelAdviceRepo.getTravelAdvice(fromStop.getStation(), ride.getDestination(), fromStop.getDepartureTime(), TimeType.DEPARTURE);
 				
-				logger.info("Got travel advice: " + advice);
+				logger.debug("Got travel advice: " + advice);
 				
 				// We expect to get a travel advice without transfers (i.e. advice.getParts() == 1), and where the travel part has the same ride code.
 				// Note: this assumes that we will not get a travel advice for the next day

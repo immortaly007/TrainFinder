@@ -13,13 +13,17 @@ public class Ride {
 	private final LocalDate startDate;
 	private final String rideCode;
 	private final Station destination;	
+	private final String carrier;
+	private final String trainType;
 	
 	private List<RideStop> stops;
 	
-	public Ride(LocalDate startDate, String rideCode, Station destination) {
+	public Ride(LocalDate startDate, String rideCode, Station destination, String carrier, String trainType) {
 		this.startDate = startDate;
 		this.rideCode = rideCode;
 		this.destination = destination;
+		this.carrier = carrier;
+		this.trainType = trainType;
 		stops = new CopyOnWriteArrayList<>();
 	}
 	
@@ -35,9 +39,25 @@ public class Ride {
 		return destination;
 	}
 	
+	public String getCarrier() {
+		return carrier;
+	}
+	
+	public String getTrainType() {
+		return trainType;
+	}
+	
 	public Collection<RideStop> getStops() {
 		// Don't allow editing departures directly
 		return Collections.unmodifiableCollection(stops);
+	}
+	
+	/**
+	 * @return True if the last stop if known, i.e. if the last stop in #stops is at the destination.
+	 */
+	public boolean isLastStopKnown() {
+		if (stops.isEmpty()) return false;
+		return getLastKnownStop().getStation().equals(destination);
 	}
 	
 	/**
@@ -79,6 +99,17 @@ public class Ride {
 		return nextStopIdx;
 	}
 	
+	private int getActualNextStopIndex(OffsetDateTime time) {
+		int nextStopIdx = 0;
+		for(RideStop s : stops) {
+			if (s.getActualDepartureTime().isAfter(time)) {
+				break;
+			}
+			nextStopIdx++;
+		}
+		return nextStopIdx;
+	}
+	
 	/**
 	 * @return The last stop of which the details (departure time etc.) are known. Not necessarily the same as the final destination.
 	 */
@@ -97,6 +128,7 @@ public class Ride {
 	}
 	
 	/**
+	 * Returns the previous stop at the given time based on the planned departure times of the train.
 	 * @param time
 	 * @return The last stop the train departed from (given the time). Will return the final destination if this ride is over. Does not account for delays. 
 	 */
@@ -105,6 +137,20 @@ public class Ride {
 		if (stops == null || stops.isEmpty()) return null;
 		
 		int nextStopIdx = getNextStopIndex(time);
+		if (nextStopIdx == 0) return null;
+		return stops.get(nextStopIdx - 1);
+	}
+	
+	/**
+	 *  Returns the previous stop at the given time based on the actual departure times of the train.
+	 * @param time
+	 * @return The last stop the train departed from (given the time). Will return the final destination if this ride is over. Does not account for delays. 
+	 */
+	public RideStop getActualPreviousStop(OffsetDateTime time) {
+		
+		if (stops == null || stops.isEmpty()) return null;
+		
+		int nextStopIdx = getActualNextStopIndex(time);
 		if (nextStopIdx == 0) return null;
 		return stops.get(nextStopIdx - 1);
 	}
@@ -127,6 +173,24 @@ public class Ride {
 		
 	}
 	
+	/**
+	 * @param time
+	 * @return The next stop the train arrives at given a time, or null if the given time is after the last known stop. Returns the first stop if this ride
+	 * hasn't departed yet. Does not account for delays. 
+	 */
+	public RideStop getActualNextStop(OffsetDateTime time) {
+		
+		if (stops == null || stops.isEmpty()) return null;
+		
+		int nextStopIdx = getActualNextStopIndex(time);
+		if (nextStopIdx == stops.size()) {
+			return null;
+		} else {
+			return stops.get(nextStopIdx);
+		}
+		
+	}
+	
 	public RideStop getStopBefore(RideStop stop) {
 		
 		int idx = stops.indexOf(stop);
@@ -140,6 +204,16 @@ public class Ride {
 		int idx = stops.indexOf(stop);
 		if (idx == -1 || idx + 1 >= stops.size()) return null;
 		return stops.get(idx + 1);
+	}
+
+	public RideStop getStopAt(Station station) {
+		
+		for (RideStop stop : stops) {
+			if (stop.getStation().equals(station)) {
+				return stop;
+			}
+		}
+		return null;
 	}
 	
 	@Override

@@ -12,6 +12,8 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.lang3.NotImplementedException;
+
 import com.basdado.trainfinder.controller.TrainStatusFacade;
 import com.basdado.trainfinder.data.StationRepository;
 import com.basdado.trainfinder.model.Station;
@@ -31,24 +33,24 @@ public class TrainFinderRESTService {
 	@Inject private TrainStatusFacade trainStatusFacade;
 
     @GET
-    @Path("/{lat:[0-9]*.?[0-9]*}-{lon:[0-9]*.?[0-9]*}")
+    @Path("/near-{lat:[0-9]*.?[0-9]*}-{lon:[0-9]*.?[0-9]*}")
     @Produces(MediaType.APPLICATION_JSON)
-    public String lookupMemberById(@PathParam("lat") float lat, @PathParam("lon") float lon) {
+    public Train getNearestTrain(@PathParam("lat") double lat, @PathParam("lon") double lon) {
         
     	logger.log(Level.INFO, "Latitude: " + lat + ", Longitude: " + lon);
-    	return "Latitude: " + lat + ", Longitude: " + lon;
+    	throw new NotImplementedException("getNearestTrain() is not yet implemented");
     	
     }
     
     @GET
-    @Path("getStations")
+    @Path("stations")
     @Produces(MediaType.APPLICATION_JSON)
     public Collection<Station> getStations() {
     	return stationRepository.getStations();
     }
     
     @GET
-    @Path("getTrains")
+    @Path("trains")
     @Produces(MediaType.APPLICATION_JSON)
     public Collection<Train> getTrains() {
     	return trainStatusFacade.getCurrentTrains();

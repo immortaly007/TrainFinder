@@ -40,7 +40,7 @@ public class NSDeparturesRepository implements DeparturesRepository {
 		
 		return departureInfoResponse.getDepartures().stream()
 				.map(d ->
-					new Departure(station, nsStationRepo.getStationWithName(d.getDestination()), d.getRideNumber(), d.getDepartureTime(), d.getDelay(), d.getTrack())
+					new Departure(station, nsStationRepo.getStationWithName(d.getDestination()), d.getRideNumber(), d.getDepartureTime(), d.getDelay(), d.getTrack(), d.getCarrier(), d.getTrainType())
 				).collect(Collectors.toList());
 		
 	}

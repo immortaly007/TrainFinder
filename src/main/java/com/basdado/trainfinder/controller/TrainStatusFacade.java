@@ -36,8 +36,8 @@ public class TrainStatusFacade {
 			
 			if (DateTimeUtil.between(ride.getFirstKnownStop().getActualDepartureTime(), ride.getLastKnownStop().getActualDepartureTime(), now)) {
 				
-				RideStop previousStop = ride.getPreviousStop(now);
-				RideStop nextStop = ride.getNextStop(now);
+				RideStop previousStop = ride.getActualPreviousStop(now);
+				RideStop nextStop = ride.getActualNextStop(now);
 				if (previousStop == null || nextStop == null) {
 					logger.warn("Previous or next stop not found at " + now + "  for ride: " + ride);
 					continue;
@@ -48,16 +48,18 @@ public class TrainStatusFacade {
 				
 				LatLonCoordinate currentTrainPosition = trainRailwayPath.calculatePositionForProgress(f);
 				
-				Train train = new Train();
-				train.setDepartureStation(previousStop.getStation());
-				train.setActualDepartureTime(previousStop.getActualDepartureTime());
-				train.setPlannedDepartureTime(previousStop.getDepartureTime());
-				train.setArrivalStation(nextStop.getStation());
-				train.setActualArrivalTime(nextStop.getActualDepartureTime());
-				train.setPlannedArrivalTime(nextStop.getDepartureTime());
-				train.setPosition(currentTrainPosition);
-				train.setRideCode(ride.getRideCode());
-				
+				Train train = new Train(
+						currentTrainPosition,
+						previousStop.getStation(),
+						previousStop.getDepartureTime(),
+						previousStop.getActualDepartureTime(),
+						nextStop.getStation(),
+						nextStop.getDepartureTime(),
+						nextStop.getActualDepartureTime(),
+						ride.getRideCode(),
+						ride.getCarrier(),
+						ride.getTrainType());
+
 				res.add(train);
 			}
 		}

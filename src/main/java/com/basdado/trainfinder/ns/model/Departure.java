@@ -39,7 +39,7 @@ public class Departure {
 	@XmlElement(name="RouteTekst")
 	private String routeText;
 	
-	@XmlElement(name="RouteTekst")
+	@XmlElement(name="Vervoerder")
 	private String carrier;
 	
 	@XmlElement(name="VertrekSpoor")

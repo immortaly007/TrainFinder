@@ -105,7 +105,7 @@ public class TrainRideDataManager {
 					RideStop lastKnownStop = rideTomorrow.getLastKnownStop();
 					if (lastKnownStop.getDepartureTime().isBefore(maximumRideEnd)) {
 						// if we actually found a wrongly categorized ride, we need a new one.
-						Ride newRide = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination());
+						Ride newRide = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination(), departure.getCarrier(), departure.getTrainType());
 						rides.remove(rkTomorrow);
 						for(RideStop s: rideTomorrow.getStops()) {
 							newRide.addStop(s);
@@ -119,7 +119,7 @@ public class TrainRideDataManager {
 		
 		if (ride == null) {
 			// If we still haven't been able to find the ride, it doesn't exist yet, so we create it
-			ride = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination());
+			ride = new Ride(departure.getDepartureTime().toLocalDate(), departure.getRideNumber(), departure.getFinalDestination(), departure.getCarrier(), departure.getTrainType());
 			rides.put(new RideKey(ride), ride);
 		}
 		
@@ -127,7 +127,7 @@ public class TrainRideDataManager {
 		// but at other stations are clear. In this case we need to replace the ride with the missing destination by one with a correct destination:
 		if (ride != null && ride.getDestination() == null && departure.getFinalDestination() != null) {
 			
-			Ride newRide = new Ride(ride.getStartDate(), ride.getRideCode(), departure.getFinalDestination());
+			Ride newRide = new Ride(ride.getStartDate(), ride.getRideCode(), departure.getFinalDestination(), departure.getCarrier(), departure.getTrainType());
 			for (RideStop s : ride.getStops()) {
 				newRide.addStop(s);
 			}

@@ -4,79 +4,70 @@ import java.time.OffsetDateTime;
 
 public class Train {
 	
-	private LatLonCoordinate position;
-	private Station departureStation;
-	private OffsetDateTime plannedDepartureTime;
-	private OffsetDateTime actualDepartureTime;
-	private Station arrivalStation;
-	private OffsetDateTime plannedArrivalTime;
-	private OffsetDateTime actualArrivalTime;
-	private String rideCode;
+	private final LatLonCoordinate position;
+	private final Station departureStation;
+	private final OffsetDateTime plannedDepartureTime;
+	private final OffsetDateTime actualDepartureTime;
+	private final Station arrivalStation;
+	private final OffsetDateTime plannedArrivalTime;
+	private final OffsetDateTime actualArrivalTime;
+	private final String rideCode;
+	private final String carrier;
+	private final String trainType;
+
 	
-	public String getRideCode() {
-		return rideCode;
+	public Train(LatLonCoordinate position, Station departureStation, OffsetDateTime plannedDepartureTime,
+			OffsetDateTime actualDepartureTime, Station arrivalStation, OffsetDateTime plannedArrivalTime,
+			OffsetDateTime actualArrivalTime, String rideCode, String carrier, String trainType) {
+		this.position = position;
+		this.departureStation = departureStation;
+		this.plannedDepartureTime = plannedDepartureTime;
+		this.actualDepartureTime = actualDepartureTime;
+		this.arrivalStation = arrivalStation;
+		this.plannedArrivalTime = plannedArrivalTime;
+		this.actualArrivalTime = actualArrivalTime;
+		this.rideCode = rideCode;
+		this.carrier = carrier;
+		this.trainType = trainType;
 	}
 
-	public void setRideCode(String rideCode) {
-		this.rideCode = rideCode;
+	public String getRideCode() {
+		return rideCode;
 	}
 
 	public LatLonCoordinate getPosition() {
 		return position;
 	}
 
-	public void setPosition(LatLonCoordinate position) {
-		this.position = position;
-	}
-
 	public Station getDepartureStation() {
 		return departureStation;
-	}
-
-	public void setDepartureStation(Station departureStation) {
-		this.departureStation = departureStation;
 	}
 
 	public OffsetDateTime getPlannedDepartureTime() {
 		return plannedDepartureTime;
 	}
-
-	public void setPlannedDepartureTime(OffsetDateTime plannedDepartureTime) {
-		this.plannedDepartureTime = plannedDepartureTime;
-	}
-
+	
 	public OffsetDateTime getActualDepartureTime() {
 		return actualDepartureTime;
-	}
-
-	public void setActualDepartureTime(OffsetDateTime actualDepartureTime) {
-		this.actualDepartureTime = actualDepartureTime;
 	}
 
 	public Station getArrivalStation() {
 		return arrivalStation;
 	}
 
-	public void setArrivalStation(Station arrivalStation) {
-		this.arrivalStation = arrivalStation;
-	}
-
 	public OffsetDateTime getPlannedArrivalTime() {
 		return plannedArrivalTime;
-	}
-
-	public void setPlannedArrivalTime(OffsetDateTime plannedArrivalTime) {
-		this.plannedArrivalTime = plannedArrivalTime;
 	}
 
 	public OffsetDateTime getActualArrivalTime() {
 		return actualArrivalTime;
 	}
 
-	public void setActualArrivalTime(OffsetDateTime actualArrivalTime) {
-		this.actualArrivalTime = actualArrivalTime;
+	public String getCarrier() {
+		return carrier;
 	}
 	
-	
-
+	public String getTrainType() {
+		return trainType;
+	}
 }

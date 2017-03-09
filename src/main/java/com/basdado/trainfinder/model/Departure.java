@@ -14,8 +14,10 @@ public class Departure implements Serializable {
 	private final OffsetDateTime departureTime;
 	private final Duration delay;
 	private final String track;
+	private final String carrier;
+	private final String trainType;
 	
-	public Departure(Station station, Station finalDestination, String rideNumber, OffsetDateTime departureTime, Duration delay, String track) {
+	public Departure(Station station, Station finalDestination, String rideNumber, OffsetDateTime departureTime, Duration delay, String track, String carrier, String trainType) {
 		super();
 		this.station = station;
 		this.finalDestination = finalDestination;
@@ -23,6 +25,8 @@ public class Departure implements Serializable {
 		this.departureTime = departureTime;
 		this.delay = delay;
 		this.track = track;
+		this.carrier = carrier;
+		this.trainType = trainType;
 	}
 
 	public Station getStation() {
@@ -47,5 +51,13 @@ public class Departure implements Serializable {
 	
 	public String getTrack() {
 		return track;
+	}
+	
+	public String getCarrier() {
+		return carrier;
+	}
+	
+	public String getTrainType() {
+		return trainType;
 	}
 }
