@@ -46,9 +46,22 @@ Running the application
 -----------------------
 Build the repository (`mvn clean package`) and deploy the generated `trainfinder.war` (found in the `target` directory) to your application server (either by placing it in `wildfly-10.1.0.Final/standalone/deployments` or by using WildFly/JBoss CLI).
 
+It will be accessible on whatever is the default location for `war` files on your application server. For wildfly it is `host:port/trainfinder/`. In wildfly, you can easily change the context root and virtual server using the `src\main\webapp\WEB-INF\jboss-web.xml` deployment descriptor with the following content:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jboss-web>
+
+    <context-root>/</context-root>
+    <virtual-host>trainfinder-host</virtual-host>
+    
+</jboss-web>
+```
+
 When you start the server, it should start reading the railway map and polling stations.
 
 How to use
 ----------
 You can view live train information on a map using `http://host:port/trainfinder/live`.
-The functionality is accessible through a REST interface at: `http://host:port/trainfinder/rest/train`. Details of this interface are not yet provided.
+The functionality is accessible through a REST interface at: `http://host:port/trainfinder/rest/train`. The following resources exists:
+ * `rest/train/stations`: returns a JSON array with all known stations
+ * `rest/train/trains`: returns a JSON array with information on all known active trains, such as the current position of the train, the previous and next stations, and the ride is in currently on.
