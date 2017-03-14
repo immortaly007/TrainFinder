@@ -6,12 +6,12 @@ import com.basdado.trainfinder.util.CoordinateUtil;
 
 public class Railway {
 	
-	private final LatLonCoordinate[] nodes;
+	private final LatLng[] nodes;
 	private final double[] lengthUntil;
 	private final Station from;
 	private final Station to;
 	
-	public Railway(LatLonCoordinate[] nodes, double[] lengthUntil, Station from, Station to) {
+	public Railway(LatLng[] nodes, double[] lengthUntil, Station from, Station to) {
 		super();
 		this.nodes = nodes;
 		this.lengthUntil = lengthUntil;
@@ -41,7 +41,7 @@ public class Railway {
 		return lengthUntil[lengthUntil.length - 1];
 	}
 	
-	public LatLonCoordinate getNodePosition(int index) {
+	public LatLng getNodePosition(int index) {
 		return nodes[index];
 	}
 	
@@ -54,7 +54,7 @@ public class Railway {
 	 * @param f The percentage [0, 1] the train has progressed along this Railway.
 	 * @return The position (coordinate).
 	 */
-	public LatLonCoordinate calculatePositionForProgress(double f) {
+	public LatLng calculatePositionForProgress(double f) {
 		
 		double distanceTraveled = f * getLength();
 		int binSearchResult = Arrays.binarySearch(lengthUntil, distanceTraveled);
@@ -79,7 +79,7 @@ public class Railway {
 	
 	public Railway reversed() {
 		
-		LatLonCoordinate[] reversedNodes = new LatLonCoordinate[nodes.length];
+		LatLng[] reversedNodes = new LatLng[nodes.length];
 		for (int i = 0; i < nodes.length; i++) {
 			reversedNodes[nodes.length - 1 - i] = nodes[i];
 		}

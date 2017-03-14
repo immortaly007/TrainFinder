@@ -15,7 +15,7 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.basdado.trainfinder.model.LatLonCoordinate;
+import com.basdado.trainfinder.model.LatLng;
 import com.basdado.trainfinder.model.Station;
 import com.basdado.trainfinder.ns.communicator.NSCommunicator;
 import com.basdado.trainfinder.ns.exception.NSException;
@@ -57,7 +57,7 @@ public class NSStationRepository implements StationRepository {
 			}
 			
 			nsStations = stationInfoResponse.getStations().stream().map(s -> new Station(s.getCode(),
-					s.getStationNames().getShortName(), s.getStationNames().getLongName(), new LatLonCoordinate(s.getLat(), s.getLon()), s.getCountry()))
+					s.getStationNames().getShortName(), s.getStationNames().getLongName(), new LatLng(s.getLat(), s.getLon()), s.getCountry()))
 					.collect(Collectors.toList());
 			
 			stationCollectionCache.put(NS_STATION_COLLECTION_CACHE_KEY, Collections.unmodifiableCollection(nsStations));

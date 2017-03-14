@@ -12,11 +12,11 @@ public class Station implements Serializable {
 	
 	private final String fullName;
 	
-	private final LatLonCoordinate location;
+	private final LatLng location;
 	
 	private final String countryCode;
 
-	public Station(String code, String shortName, String fullName, LatLonCoordinate location, String countryCode) {
+	public Station(String code, String shortName, String fullName, LatLng location, String countryCode) {
 		this.code = code;
 		this.shortName = shortName;
 		this.fullName = fullName;
@@ -40,7 +40,7 @@ public class Station implements Serializable {
 		return fullName;
 	}
 
-	public LatLonCoordinate getLocation() {
+	public LatLng getLocation() {
 		return location;
 	}
 	

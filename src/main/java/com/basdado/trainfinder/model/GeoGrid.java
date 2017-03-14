@@ -15,14 +15,14 @@ public class GeoGrid<T> {
 		this.tileSize = tileSize;
 	}
 	
-	public void setTileAt(LatLonCoordinate pos, T value) {
+	public void setTileAt(LatLng pos, T value) {
 		grid.set(
 				calculateHorizontalTileIdx(pos), 
 				calculateVerticalTileIdx(pos),
 				value);
 	}
 	
-	public T getTileAt(LatLonCoordinate pos) {
+	public T getTileAt(LatLng pos) {
 		return getTile(
 				calculateHorizontalTileIdx(pos),
 				calculateVerticalTileIdx(pos));
@@ -32,11 +32,11 @@ public class GeoGrid<T> {
 		return grid.get(x, y);
 	}
 	
-	public boolean isOnTile(LatLonCoordinate pos, int x, int y) {
+	public boolean isOnTile(LatLng pos, int x, int y) {
 		return calculateHorizontalTileIdx(pos) == x && calculateVerticalTileIdx(pos) == y;
 	}
 	
-	public double getDistanceToTile(LatLonCoordinate pos, int x, int y) {
+	public double getDistanceToTile(LatLng pos, int x, int y) {
 		
 		if (isOnTile(pos, x, y)) {
 			return 0;
@@ -48,20 +48,20 @@ public class GeoGrid<T> {
 		double maxLat = getMaximumLatitude(y);
 		
 		double distance1 = Math.abs(CoordinateUtil.crossTrackDist(
-				new LatLonCoordinate(minLat, minLon), 
-				new LatLonCoordinate(minLat, maxLon),
+				new LatLng(minLat, minLon), 
+				new LatLng(minLat, maxLon),
 				pos));
 		double distance2 = Math.abs(CoordinateUtil.crossTrackDist(
-				new LatLonCoordinate(minLat, maxLon), 
-				new LatLonCoordinate(maxLat, maxLon),
+				new LatLng(minLat, maxLon), 
+				new LatLng(maxLat, maxLon),
 				pos));
 		double distance3 = Math.abs(CoordinateUtil.crossTrackDist(
-				new LatLonCoordinate(maxLat, minLon), 
-				new LatLonCoordinate(maxLat, maxLon),
+				new LatLng(maxLat, minLon), 
+				new LatLng(maxLat, maxLon),
 				pos));
 		double distance4 = Math.abs(CoordinateUtil.crossTrackDist(
-				new LatLonCoordinate(minLat, minLon), 
-				new LatLonCoordinate(maxLat, minLon),
+				new LatLng(minLat, minLon), 
+				new LatLng(maxLat, minLon),
 				pos));
 		
 		return Math.min(
@@ -77,7 +77,7 @@ public class GeoGrid<T> {
 	 * @param y The y-index of the tile
 	 * @return The distance from pos to the corner of the tile that is farthest from pos.
 	 */
-	public double getMaximumDistanceOnTile(LatLonCoordinate pos, int x, int y) {
+	public double getMaximumDistanceOnTile(LatLng pos, int x, int y) {
 		
 		// Note that the point furthest away from pos is always a corner, so we just check the distance to all four corners, and return the longest one.
 		double minLon = getMinimumLongitude(x);
@@ -85,10 +85,10 @@ public class GeoGrid<T> {
 		double minLat = getMinimumLatitude(y);
 		double maxLat = getMaximumLatitude(y);
 		
-		double distance1 = CoordinateUtil.dist(pos, new LatLonCoordinate(minLat, minLon));
-		double distance2 = CoordinateUtil.dist(pos, new LatLonCoordinate(maxLat, minLon));
-		double distance3 = CoordinateUtil.dist(pos, new LatLonCoordinate(minLat, maxLon));
-		double distance4 = CoordinateUtil.dist(pos, new LatLonCoordinate(maxLat, maxLon));
+		double distance1 = CoordinateUtil.dist(pos, new LatLng(minLat, minLon));
+		double distance2 = CoordinateUtil.dist(pos, new LatLng(maxLat, minLon));
+		double distance3 = CoordinateUtil.dist(pos, new LatLng(minLat, maxLon));
+		double distance4 = CoordinateUtil.dist(pos, new LatLng(maxLat, maxLon));
 		
 		return Math.min(
 				Math.min(distance1, distance2),
@@ -105,11 +105,11 @@ public class GeoGrid<T> {
 		return (int)Math.ceil(totalLon / tileSize);
 	}
 	
-	public int calculateHorizontalTileIdx(LatLonCoordinate coord) {
+	public int calculateHorizontalTileIdx(LatLng coord) {
 		return ((int)Math.floor((coord.getLongitude() - CoordinateUtil.MIN_LONGITUDE) / tileSize));
 	}
 	
-	public int calculateVerticalTileIdx(LatLonCoordinate coord) {
+	public int calculateVerticalTileIdx(LatLng coord) {
 		return ((int)Math.floor((coord.getLatitude() - CoordinateUtil.MIN_LATITUDE) / tileSize));
 	}
 	

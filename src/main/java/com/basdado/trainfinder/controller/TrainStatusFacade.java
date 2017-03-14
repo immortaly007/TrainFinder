@@ -11,7 +11,8 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.basdado.trainfinder.model.LatLonCoordinate;
+import com.basdado.trainfinder.exception.PathFindingException;
+import com.basdado.trainfinder.model.LatLng;
 import com.basdado.trainfinder.model.Railway;
 import com.basdado.trainfinder.model.Ride;
 import com.basdado.trainfinder.model.RideStop;
@@ -42,25 +43,28 @@ public class TrainStatusFacade {
 					logger.warn("Previous or next stop not found at " + now + "  for ride: " + ride);
 					continue;
 				}
-				Railway trainRailwayPath = trainRoutes.getRailway(previousStop.getStation(), nextStop.getStation());
-				double f = ((double)(now.toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond())) / 
-						((double)(nextStop.getActualDepartureTime().toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond()));
-				
-				LatLonCoordinate currentTrainPosition = trainRailwayPath.calculatePositionForProgress(f);
-				
-				Train train = new Train(
-						currentTrainPosition,
-						previousStop.getStation(),
-						previousStop.getDepartureTime(),
-						previousStop.getActualDepartureTime(),
-						nextStop.getStation(),
-						nextStop.getDepartureTime(),
-						nextStop.getActualDepartureTime(),
-						ride.getRideCode(),
-						ride.getCarrier(),
-						ride.getTrainType());
-
-				res.add(train);
+				try {
+					Railway trainRailwayPath = trainRoutes.getRailway(previousStop.getStation(), nextStop.getStation());
+					double traveledTime = now.toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond();
+					double totalTime = nextStop.getActualDepartureTime().toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond();
+					double f = traveledTime <= 0.0001 ? 0 : traveledTime / totalTime;
+					
+					LatLng currentTrainPosition = trainRailwayPath.calculatePositionForProgress(f);
+					
+					Train train = new Train(
+							currentTrainPosition,
+							previousStop.getStation(),
+							previousStop.getDepartureTime(),
+							previousStop.getActualDepartureTime(),
+							nextStop.getStation(),
+							nextStop.getDepartureTime(),
+							nextStop.getActualDepartureTime(),
+							ride);
+	
+					res.add(train);
+				} catch (PathFindingException e) {
+					logger.warn("Could not find railways from " + previousStop.getStation() + " to " + nextStop.getStation() + ": " + e.getMessage());
+				}
 			}
 		}
 		

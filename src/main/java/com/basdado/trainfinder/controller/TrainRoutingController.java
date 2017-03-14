@@ -4,11 +4,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
@@ -24,7 +24,8 @@ import org.slf4j.LoggerFactory;
 
 import com.basdado.trainfinder.config.ConfigService;
 import com.basdado.trainfinder.config.OpenStreetMapConfiguration;
-import com.basdado.trainfinder.model.LatLonCoordinate;
+import com.basdado.trainfinder.exception.PathFindingException;
+import com.basdado.trainfinder.model.LatLng;
 import com.basdado.trainfinder.model.OsmRailwayMap;
 import com.basdado.trainfinder.model.OsmRailwayMap.OsmRailwayMapNode;
 import com.basdado.trainfinder.model.Railway;
@@ -85,7 +86,7 @@ public class TrainRoutingController {
 				cacheManager.getCache(RAILWAY_CACHE_KEY, String.class, Railway.class);
 	}
 	
-	public Railway getRailway(Station from, Station to) {
+	public Railway getRailway(Station from, Station to) throws PathFindingException {
 		
 		if (nodesAddedNearStation.get(from.getCode()) == null || !nodesAddedNearStation.get(from.getCode())) {
 			addNodesOnTracksNear(from.getLocation());
@@ -122,36 +123,44 @@ public class TrainRoutingController {
 		return from.getCode() + "-" + to.getCode();
 	}
 	
-	private List<Long> calculateShortestPathBetween(LatLonCoordinate from, LatLonCoordinate to) {
+	private List<Long> calculateShortestPathBetween(LatLng from, LatLng to) throws PathFindingException {
 		
 		List<Long> sourceNodes = findNodesNear(from);
 		if (sourceNodes.isEmpty()) {
 			sourceNodes = addNodesOnTracksNear(from);
 		}
 		if (sourceNodes.isEmpty()) {
-			throw new IllegalStateException("Could not find railway nodes near from coordinate " + from);
+			throw new PathFindingException("Could not find railway nodes near from coordinate " + from);
 		}
-		Set<Long> destNodes = new HashSet<>(findNodesNear(to));
+		List<Long> destNodes = findNodesNear(to);
 		if (destNodes.isEmpty()) {
-			destNodes = new HashSet<>(addNodesOnTracksNear(to));
+			destNodes = addNodesOnTracksNear(to);
 		}
 		if (destNodes.isEmpty()) {
-			throw new IllegalStateException("Could not find railway nodes near to coordinate " + to);
+			throw new PathFindingException("Could not find railway nodes near to coordinate " + to);
 		}
 		
+		// First try to find a path directly from the closest node to "from" to the closest node to "to".
+		List<Long> pathNodes = RailwayMapUtil.calculateShortestPathBetween(railwayMap, sourceNodes.get(0), new HashSet<>(Arrays.asList(destNodes.get(0))));
+		if (pathNodes != null && !pathNodes.isEmpty()) {
+			return pathNodes;
+		}
+		
+		// Otherwise, try any combination of nodes
 		for (Long sourceNodeId : sourceNodes) {
-			List<Long> pathNodes = RailwayMapUtil.calculateShortestPathBetween(railwayMap, sourceNodeId, destNodes);
+
+			pathNodes = RailwayMapUtil.calculateShortestPathBetween(railwayMap, sourceNodeId, new HashSet<>(Arrays.asList(destNodes.get(0))));
 			if (pathNodes != null && !pathNodes.isEmpty()) {
 				return pathNodes;
 			}
 		}
 		
-		return null;
+		throw new PathFindingException("Could not find a path from " + from + " to " + to);
 	}
 	
 	private Railway generateRailway(List<Long> pathNodes, Station from, Station to) {
 		
-		LatLonCoordinate[] path = new LatLonCoordinate[pathNodes.size()];
+		LatLng[] path = new LatLng[pathNodes.size()];
 		double[] distanceUntil = new double[pathNodes.size()];
 		Long previousPathNodeId = null;
 		OsmRailwayMapNode previousPathNode = null;
@@ -182,7 +191,7 @@ public class TrainRoutingController {
 	
 
 	
-	private List<Long> findNodesNear(LatLonCoordinate pos) {
+	private List<Long> findNodesNear(LatLng pos) {
 		List<Long> preferredNodes = railwayMap.findNodesNear(pos, configService.getOpenStreetMapConfiguration().getPreferredStationToTrackDistance());
 //		if (preferredNodes.isEmpty()) {
 //			return railwayMap.findNodesNear(pos, configService.getOpenStreetMapConfiguration().getMaxStationToTrackDistance());
@@ -191,7 +200,7 @@ public class TrainRoutingController {
 //		}
 	}
 	
-	private List<Long> addNodesOnTracksNear(LatLonCoordinate pos) {
+	private List<Long> addNodesOnTracksNear(LatLng pos) {
 		return addNodesOnTracksNear(pos, configService.getOpenStreetMapConfiguration().getPreferredStationToTrackDistance());
 	}
 	
@@ -204,14 +213,15 @@ public class TrainRoutingController {
 	 * @param maxDist
 	 * @return
 	 */
-	private List<Long> addNodesOnTracksNear(LatLonCoordinate pos, double maxDist) {
+	private List<Long> addNodesOnTracksNear(LatLng pos, double maxDist) {
 		
 		double trackNodeDistance = railwayMap.getLongestNodeConnectionDistance() + maxDist;
 		List<Long> nearbyTrackNodes = railwayMap.findNodesNear(pos, trackNodeDistance);
 		
+		// Triple: left = existing node 1, middle = existing node 2, right = new node. 
 		List<Triple<Long, Long, Long>> addedNodes = new ArrayList<>();
 		
-		// Find all paths that pass nearby pos.
+		// Find all paths (lines) that pass nearby pos.
 		for (Long nodeId : nearbyTrackNodes) {
 			OsmRailwayMapNode node = railwayMap.getNode(nodeId);
 			for (Long neighborNodeId : node.getConnections().keySet()) {
@@ -241,16 +251,18 @@ public class TrainRoutingController {
 			railwayMap.addWay(Arrays.asList(node1Id, newNodeId, node2Id));
 		}
 		
-		return addedNodes.stream().map(n -> n.getRight()).collect(Collectors.toList());
+		return addedNodes.stream().map(n -> n.getRight())
+				.sorted(Comparator.comparing(a -> CoordinateUtil.angularDist(railwayMap.getNode(a).getPosition(), pos)))
+				.collect(Collectors.toList());
 		
 	}
 	
-	private Long addNodeOnPath(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate pos) {
+	private Long addNodeOnPath(LatLng c1, LatLng c2, LatLng pos) {
 		
 		double alongTrack = CoordinateUtil.alongTrackDist(c1, c2, pos);
 		double trackLength = CoordinateUtil.dist(c1, c2);
 		
-		LatLonCoordinate nodeOnPathPos = CoordinateUtil.interpolate(c1, c2, alongTrack / trackLength);
+		LatLng nodeOnPathPos = CoordinateUtil.interpolate(c1, c2, alongTrack / trackLength);
 		long newNodeId = 0;
 		// Find the first free node index
 		while(railwayMap.getNode(newNodeId) != null) {

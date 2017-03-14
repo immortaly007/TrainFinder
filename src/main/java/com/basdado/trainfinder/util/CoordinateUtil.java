@@ -1,6 +1,6 @@
 package com.basdado.trainfinder.util;
 
-import com.basdado.trainfinder.model.LatLonCoordinate;
+import com.basdado.trainfinder.model.LatLng;
 import com.basdado.trainfinder.model.Vector3;
 
 public class CoordinateUtil {
@@ -18,7 +18,7 @@ public class CoordinateUtil {
 	 * @param coord A coordinate (latitude, longitude) on the Earth's surface
 	 * @return A 3D vector representing the position on earth
 	 */
-	public static Vector3 toVector3(LatLonCoordinate coord) {
+	public static Vector3 toVector3(LatLng coord) {
 		return toVector3(coord, 0, RADIUS_EARTH);
 	}
 	
@@ -29,7 +29,7 @@ public class CoordinateUtil {
 	 * @param rad The radius of the planet
 	 * @return A 3D coordinate representing the given position
 	 */
-	public static Vector3 toVector3(LatLonCoordinate coord, double alt, double rad) {
+	public static Vector3 toVector3(LatLng coord, double alt, double rad) {
 		// see: http://www.mathworks.de/help/toolbox/aeroblks/llatoecefposition.html
 		double lat = Math.toRadians(coord.getLatitude());
 		double lon = Math.toRadians(coord.getLongitude());
@@ -53,7 +53,7 @@ public class CoordinateUtil {
 	 * @return The coordinate that lies at f% between c1 and c2 when traveling the shortest surface path 
 	 * between those points (great circle path or orthodrome).
 	 */
-	public static LatLonCoordinate interpolate(LatLonCoordinate c1, LatLonCoordinate c2, double f) {
+	public static LatLng interpolate(LatLng c1, LatLng c2, double f) {
 		
 		// See: http://www.movable-type.co.uk/scripts/latlong.html
 		double delta = angularDist(c1, c2);
@@ -72,7 +72,7 @@ public class CoordinateUtil {
 		double lati = Math.atan2(z, Math.sqrt(x * x + y * y));
 		double loni = Math.atan2(y, x);
 		
-		return new LatLonCoordinate(Math.toDegrees(lati), Math.toDegrees(loni));
+		return new LatLng(Math.toDegrees(lati), Math.toDegrees(loni));
 	}
 	
 	/**
@@ -81,7 +81,7 @@ public class CoordinateUtil {
 	 * @param c2 The second coordinate (end)
 	 * @return The angular distance between c1 and c2.
 	 */
-	public static double angularDist(LatLonCoordinate c1, LatLonCoordinate c2) {
+	public static double angularDist(LatLng c1, LatLng c2) {
 		
 	    double dLat = Math.toRadians(c2.getLatitude()-c1.getLatitude());
 	    double dLng = Math.toRadians(c2.getLongitude()-c1.getLongitude());
@@ -102,7 +102,7 @@ public class CoordinateUtil {
 	 * @param c2 The second coordinate (finish)
 	 * @return The bearing (in radians)
 	 */
-	public static double bearing(LatLonCoordinate c1, LatLonCoordinate c2) {
+	public static double bearing(LatLng c1, LatLng c2) {
 		
 		double c1lat = Math.toRadians(c1.getLatitude());
 		double c1lon = Math.toRadians(c1.getLongitude());
@@ -123,7 +123,7 @@ public class CoordinateUtil {
 	 * @param c3 The point for which the distance to the path is needed
 	 * @return 
 	 */
-	public static double angularCrossTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3) {
+	public static double angularCrossTrackDist(LatLng c1, LatLng c2, LatLng c3) {
 		double d13 = angularDist(c1, c3);
 		double b13 = bearing(c1, c3);
 		double b12 = bearing(c1, c2);
@@ -160,16 +160,16 @@ public class CoordinateUtil {
 	 * @param R The radius of the object along which the distance should be calculated
 	 * @return The distance (great circle) between c3 and the path that spans between c1 and c2.
 	 */
-	public static double crossTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3, double R) {
+	public static double crossTrackDist(LatLng c1, LatLng c2, LatLng c3, double R) {
 		
 		return angularCrossTrackDist(c1, c2, c3) * R;
 
 	}
 	
 	/**
-	 * Same as {@link #crossTrackDist(LatLonCoordinate, LatLonCoordinate, LatLonCoordinate, double)}, with R = Earths radius.
+	 * Same as {@link #crossTrackDist(LatLng, LatLng, LatLng, double)}, with R = Earths radius.
 	 */
-	public static double crossTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3) {
+	public static double crossTrackDist(LatLng c1, LatLng c2, LatLng c3) {
 		return crossTrackDist(c1, c2, c3, RADIUS_EARTH);
 	}
 	
@@ -179,7 +179,7 @@ public class CoordinateUtil {
 	 * @param c3 The point for which the closest point on the path between c1 and c2 should be found.
 	 * @return The angular distance between c1 and the point on the path between c1 and c2 that lies closest to c3.
 	 */
-	public static double angularAlongTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3) {
+	public static double angularAlongTrackDist(LatLng c1, LatLng c2, LatLng c3) {
 		
 		if (!similarDirection(bearing(c2, c1), bearing(c2, c3))) {
 			return angularDist(c1, c2);
@@ -199,7 +199,7 @@ public class CoordinateUtil {
 	 * @param 
 	 * @return The distance between c1 and the point on the path between c1 and c2 that lies closest to c3.
 	 */
-	public static double alongTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3, double R) {
+	public static double alongTrackDist(LatLng c1, LatLng c2, LatLng c3, double R) {
 		return angularAlongTrackDist(c1, c2, c3) * R;
 	}
 	
@@ -209,7 +209,7 @@ public class CoordinateUtil {
 	 * @param c3 The point for which the closest point on the path between c1 and c2 should be found.
 	 * @return The distance between c1 and the point on the path between c1 and c2 that lies closest to c3.
 	 */
-	public static double alongTrackDist(LatLonCoordinate c1, LatLonCoordinate c2, LatLonCoordinate c3) {
+	public static double alongTrackDist(LatLng c1, LatLng c2, LatLng c3) {
 		return alongTrackDist(c1, c2, c3, RADIUS_EARTH);
 	}
 	
@@ -218,7 +218,7 @@ public class CoordinateUtil {
 	 * @param c2 The second coordinate
 	 * @return The distance (in meters) between point c1 and c2.
 	 */
-	public static double dist(LatLonCoordinate c1, LatLonCoordinate c2) {
+	public static double dist(LatLng c1, LatLng c2) {
 
 	    return RADIUS_EARTH * angularDist(c1, c2);
 	}

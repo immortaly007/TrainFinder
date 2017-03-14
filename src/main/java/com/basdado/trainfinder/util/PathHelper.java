@@ -2,7 +2,7 @@ package com.basdado.trainfinder.util;
 
 import java.util.List;
 
-import com.basdado.trainfinder.model.LatLonCoordinate;
+import com.basdado.trainfinder.model.LatLng;
 
 public class PathHelper {
 	
@@ -12,7 +12,7 @@ public class PathHelper {
 	 * @param f fraction of the path that has been traveled.
 	 * @return A point along the path at f% of the completed path.
 	 */
-	public static LatLonCoordinate getPointAt(List<LatLonCoordinate> path, double f) {
+	public static LatLng getPointAt(List<LatLng> path, double f) {
 		
 		if (path == null || path.isEmpty()) throw new IllegalArgumentException("The path may not be empty");
 		if (path.size() == 1) return path.get(0);
@@ -23,8 +23,8 @@ public class PathHelper {
 		double traveled = pathLength * f;
 		
 		double t = 0;
-		LatLonCoordinate u = null;
-		for (LatLonCoordinate v : path) {
+		LatLng u = null;
+		for (LatLng v : path) {
 			if (u != null) {
 				double partDist = CoordinateUtil.dist(u, v);
 				if (t + partDist >= traveled) {
@@ -39,10 +39,10 @@ public class PathHelper {
 		
 	}
 	
-	public static double getLength(List<LatLonCoordinate> path) {
+	public static double getLength(List<LatLng> path) {
 		double pathLength = 0;
-		LatLonCoordinate v = null;
-		for (LatLonCoordinate u : path) {
+		LatLng v = null;
+		for (LatLng u : path) {
 			if (v != null) {
 				pathLength += CoordinateUtil.dist(u, v);
 			}

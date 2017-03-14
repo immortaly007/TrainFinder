@@ -50,4 +50,5 @@ When you start the server, it should start reading the railway map and polling s
 
 How to use
 ----------
+You can view live train information on a map using `http://host:port/trainfinder/live`.
 The functionality is accessible through a REST interface at: `http://host:port/trainfinder/rest/train`. Details of this interface are not yet provided.

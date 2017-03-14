@@ -4,6 +4,7 @@
 
 var trainmap = L.map('trainmap').setView([51.32889547080779, 5.034484863281251], 9);
 var trainMarkers = {};
+var stationNames = {};
 
 var trainIcon = L.icon({
     iconUrl: '../style/images/train-icon.svg',
@@ -24,8 +25,31 @@ window.setInterval(function(){
 }, 5000);
 
 $(document).ready(function() {
+	getStations()
 	updateTrains();
 })
+
+function getStations() {
+	$.ajax({
+		url: "../rest/train/stations",
+		context: document.body,
+		success: function(stations){	
+			for(var i = 0; i < stations.length; i++) {
+				var station = stations[i];
+				console.log(station + " " + station.code + "=" + station.fullName);
+				stationNames[station.code] = station.fullName;
+			}
+		}
+	});
+}
+
+function getStationName(stationCode) {
+	var stationName = stationNames[stationCode];
+	if (stationName == null) {
+		stationName = stationCode;
+	}
+	return stationName;
+}
 
 function updateTrains() {
 	$.ajax({
@@ -44,11 +68,11 @@ function updateMarkers(trains) {
 		rideCodes.push(rideCode);
 		if (rideCode in trainMarkers) {
 			var trainMarker = trainMarkers[rideCode];
-			trainMarker.setLatLng([train.position.latitude, train.position.longitude]);
+			trainMarker.setLatLng([train.position.lat, train.position.lng]);
 			trainMarker.setPopupContent(getPopupContent(train));
 		} else {
 			var trainMarker = L
-				.marker([train.position.latitude, train.position.longitude], {icon: trainIcon})
+				.marker([train.position.lat, train.position.lng], {icon: trainIcon})
 				.bindPopup(getPopupContent(train))
 				.addTo(trainmap);
 			trainMarkers[rideCode] = trainMarker;
@@ -68,6 +92,28 @@ function updateMarkers(trains) {
 
 function getPopupContent(train) {
 	
-	return "<p>" + train.carrier + " " + train.trainType + " naar " + train.arrivalStation.fullName + "</p>";
+	var finalDest = train.stops[train.stops.length - 1];
+	var popup = "<p>" + train.carrier + " " + train.trainType + " naar " + getStationName(finalDest.station) + ":</p>"
+		+ "<table>";
 	
+	for (var i = 0; i < train.stops.length; i++) {
+		var stop = train.stops[i];
+		var isNextStop = train.nextStop == stop.station;
+		var departureTime = moment.unix(stop.departureTime);
+		popup += "<tr><td>" +
+			(isNextStop ? "<b>" : "") +
+			getStationName(stop.station) + 
+			(isNextStop ? "</b>" : "") +
+			"</td><td>" +
+			(isNextStop ? "<b>" : "") +
+			departureTime.format('LT');
+		if (stop.delay != null && stop.delay != 0) {
+			popup += "+" + Math.floor(stop.delay / 60) + "min";
+		}
+		popup += (isNextStop ? "</b>" : "");
+		popup += "</td></tr>";
+	}
+	popup += "</table>";
+	
+	return popup;	
 }

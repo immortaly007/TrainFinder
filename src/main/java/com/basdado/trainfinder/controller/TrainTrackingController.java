@@ -24,7 +24,7 @@ import com.basdado.trainfinder.data.TravelAdviceRepository;
 import com.basdado.trainfinder.data.TravelAdviceRepository.TimeType;
 import com.basdado.trainfinder.exception.TravelAdviceException;
 import com.basdado.trainfinder.model.Departure;
-import com.basdado.trainfinder.model.LatLonCoordinate;
+import com.basdado.trainfinder.model.LatLng;
 import com.basdado.trainfinder.model.Ride;
 import com.basdado.trainfinder.model.RideStop;
 import com.basdado.trainfinder.model.Station;
@@ -39,8 +39,8 @@ public class TrainTrackingController {
 	
 	private static final Logger logger = LoggerFactory.getLogger(TrainTrackingController.class);
 	
-	private static final LatLonCoordinate STATION_FILTER_MAX = new LatLonCoordinate(51.777160, 6.4139832);
-	private static final LatLonCoordinate STATION_FILTER_MIN = new LatLonCoordinate(50.649176, 4.58460);
+	private static final LatLng STATION_FILTER_MAX = new LatLng(51.777160, 6.4139832);
+	private static final LatLng STATION_FILTER_MIN = new LatLng(50.649176, 4.58460);
 	
 	/**
 	 * The duration for which the departure times at a station will not be updated if the last update indicates that there are no departures

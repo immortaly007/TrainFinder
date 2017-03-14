@@ -50,7 +50,7 @@ public class OsmRailwayMap {
 	 * @param node
 	 */
 	public void addNode(OsmNode node) {
-		addNode(node.getId(), new OsmRailwayMapNode(new LatLonCoordinate(node.getLatitude(), node.getLongitude())));
+		addNode(node.getId(), new OsmRailwayMapNode(new LatLng(node.getLatitude(), node.getLongitude())));
 	}
 	
 	public void addNode(Long id, OsmRailwayMapNode node) {
@@ -165,7 +165,7 @@ public class OsmRailwayMap {
 	 * @param maxDistance The maximum distance nodes may have.
 	 * @return
 	 */
-	public List<Long> findNodesNear(LatLonCoordinate pos, double maxDistance) {
+	public List<Long> findNodesNear(LatLng pos, double maxDistance) {
 		
 		int centerX = grid.calculateHorizontalTileIdx(pos);
 		int centerY = grid.calculateVerticalTileIdx(pos);
@@ -203,7 +203,7 @@ public class OsmRailwayMap {
 					if (grid.getDistanceToTile(pos, x, y) < maxDistance) {
 						for (Long nodeId : tile) {
 							OsmRailwayMapNode node = getNode(nodeId);
-							double dist = CoordinateUtil.dist(pos, node.getPosition());
+							double dist = CoordinateUtil.angularDist(pos, node.getPosition()); // For comparison purposes, the angular distance is fine (slightly faster).
 							if (dist < maxDistance) {
 								nearbyNodes.add(new ImmutablePair<>(nodeId, dist));
 							}
@@ -245,15 +245,15 @@ public class OsmRailwayMap {
 	
 	public static class OsmRailwayMapNode {
 		
-		private final LatLonCoordinate position;
+		private final LatLng position;
 		Map<Long, Double> connections;
 		
-		public OsmRailwayMapNode(LatLonCoordinate position) {
+		public OsmRailwayMapNode(LatLng position) {
 			this.position = position;
 			this.connections = new HashMap<>();
 		}
 		
-		public LatLonCoordinate getPosition() {
+		public LatLng getPosition() {
 			return position;
 		}
 		

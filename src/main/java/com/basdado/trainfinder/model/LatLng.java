@@ -4,14 +4,19 @@ import java.io.Serializable;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-public class LatLonCoordinate implements Serializable {
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class LatLng implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	
+	@JsonProperty("lat")
 	private final double latitude;
+	
+	@JsonProperty("lng")
 	private final double longitude;
 	
-	public LatLonCoordinate(double latitude, double longitude) {
+	public LatLng(double latitude, double longitude) {
 		this.latitude = latitude;
 		this.longitude = longitude;
 	}
@@ -27,10 +32,10 @@ public class LatLonCoordinate implements Serializable {
 	@Override
 	public boolean equals(Object obj) {
 		
-		if (obj == null || !(obj instanceof LatLonCoordinate)) return false;
+		if (obj == null || !(obj instanceof LatLng)) return false;
 		if (this == obj) return true;
 		
-		LatLonCoordinate other = (LatLonCoordinate)obj;
+		LatLng other = (LatLng)obj;
 		return this.getLatitude() == other.getLatitude() && this.getLongitude() == other.getLongitude();
 		
 	}
