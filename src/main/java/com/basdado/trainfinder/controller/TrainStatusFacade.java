@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.ejb.Stateless;
 import javax.inject.Inject;
@@ -12,7 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.basdado.trainfinder.exception.PathFindingException;
-import com.basdado.trainfinder.model.LatLng;
+import com.basdado.trainfinder.model.LatLngBounds;
+import com.basdado.trainfinder.model.PositionAndBearing;
 import com.basdado.trainfinder.model.Railway;
 import com.basdado.trainfinder.model.Ride;
 import com.basdado.trainfinder.model.RideStop;
@@ -49,10 +51,11 @@ public class TrainStatusFacade {
 					double totalTime = nextStop.getActualDepartureTime().toEpochSecond() - previousStop.getActualDepartureTime().toEpochSecond();
 					double f = traveledTime <= 0.0001 ? 0 : traveledTime / totalTime;
 					
-					LatLng currentTrainPosition = trainRailwayPath.calculatePositionForProgress(f);
+					PositionAndBearing currentTrainPositionAndBearing = trainRailwayPath.calculatePositionAndBearingForProgress(f);
 					
 					Train train = new Train(
-							currentTrainPosition,
+							currentTrainPositionAndBearing.getPosition(),
+							currentTrainPositionAndBearing.getBearing(),
 							previousStop.getStation(),
 							previousStop.getDepartureTime(),
 							previousStop.getActualDepartureTime(),
@@ -69,7 +72,13 @@ public class TrainStatusFacade {
 		}
 		
 		return res;
+	}
+	
+	public Collection<Train> getCurrentTrainsInBounds(LatLngBounds bounds) {
 		
+		return getCurrentTrains().stream()
+				.filter(t -> bounds.contains(t.getPosition()))
+				.collect(Collectors.toList());
 		
 	}
 }

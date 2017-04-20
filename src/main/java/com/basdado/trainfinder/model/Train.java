@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 public class Train {
 	
 	private final LatLng position;
+	private final double bearing;
 	private final String previousStop;
 	private final OffsetDateTime plannedTimeAtPreviousStop;
 	private final OffsetDateTime actualTimeAtPreviousStop;
@@ -20,11 +21,12 @@ public class Train {
 	private final List<TrainRideStop> stops;
 
 	
-	public Train(LatLng position, 
+	public Train(LatLng position, double bearing,
 			Station previousStop, OffsetDateTime plannedTimeAtPreviousStop,	OffsetDateTime actualTimeAtPreviousStop,
 			Station nextStop, OffsetDateTime plannedTimeAtNextStop,	OffsetDateTime actualTimeAtNextStop,			
 			Ride ride) {
 		this.position = position;
+		this.bearing = bearing;
 		this.previousStop = previousStop.getCode();
 		this.plannedTimeAtPreviousStop = plannedTimeAtPreviousStop;
 		this.actualTimeAtPreviousStop = actualTimeAtPreviousStop;

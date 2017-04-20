@@ -18,5 +18,12 @@
 		<!-- The max distance a station "node" may be from the reported station location by the NS -->
 		<MaxStationToTrackDistance>100</MaxStationToTrackDistance>
 	</OpenStreetMap>
+	
+	<NearestTrainAlgorithm>
+		<DistanceSigma>300.0</DistanceSigma>
+		<BearingSigma>1.0471975512</BearingSigma> <!-- PI / 3 = 60 degrees = 1.047... radians -->
+		<PositionWeight>1.0</PositionWeight>
+		<BearingWeight>1.0</BearingWeight>
+	</NearestTrainAlgorithm>
 
 </TrainFinder>

@@ -23,6 +23,7 @@ public class ConfigService {
 	
 	private NSAPIConfiguration nsApiConfig;
 	private OpenStreetMapConfiguration openStreetMapConfig;
+	private NearestTrainAlgorithmConfig nearestTrainAlgorithmConfig;
 	
 	@PostConstruct
 	public void init() {
@@ -67,6 +68,7 @@ public class ConfigService {
 		
 		nsApiConfig = new NSAPIConfiguration(config);
 		openStreetMapConfig = new OpenStreetMapConfiguration(config);
+		nearestTrainAlgorithmConfig = new NearestTrainAlgorithmConfig(config);
 		
 	}
 	
@@ -78,4 +80,7 @@ public class ConfigService {
 		return openStreetMapConfig;
 	}
 	
+	public NearestTrainAlgorithmConfig getNearestTrainAlgorithmConfig() {
+		return nearestTrainAlgorithmConfig;
+	}
 }

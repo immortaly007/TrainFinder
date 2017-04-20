@@ -54,16 +54,22 @@ public class Railway {
 	 * @param f The percentage [0, 1] the train has progressed along this Railway.
 	 * @return The position (coordinate).
 	 */
-	public LatLng calculatePositionForProgress(double f) {
+	public PositionAndBearing calculatePositionAndBearingForProgress(double f) {
 		
 		double distanceTraveled = f * getLength();
 		int binSearchResult = Arrays.binarySearch(lengthUntil, distanceTraveled);
 		if (binSearchResult >= 0) { // We are exactly at some node, so we can return it.
-			return nodes[binSearchResult];
+			int nextNodeId = binSearchResult + 1;
+			int thisNodeId = binSearchResult;
+			if (nextNodeId >= nodes.length) {
+				thisNodeId--;
+				nextNodeId--;
+			}
+			return new PositionAndBearing(nodes[binSearchResult], bearing(thisNodeId, nextNodeId));
 		} else { // Time to interpolate
 			int nextNodeId = -binSearchResult;
 			if (nextNodeId >= nodes.length) {
-				return nodes[nodes.length - 1];
+				return new PositionAndBearing(nodes[nodes.length - 1], bearing(nodes.length - 1, nodes.length));
 			}
 			int previousNodeId = nextNodeId - 1; // > 0, because binSearchResult < 0.
 			
@@ -72,9 +78,18 @@ public class Railway {
 			
 			double nodeProgress = (distanceTraveled - distanceToPreviousNode) / (distanceToNextNode - distanceToPreviousNode);
 			
-			return CoordinateUtil.interpolate(nodes[previousNodeId], nodes[nextNodeId], nodeProgress);
+			LatLng pos = CoordinateUtil.interpolate(nodes[previousNodeId], nodes[nextNodeId], nodeProgress);
+			double bearing = bearing(previousNodeId, nextNodeId);
+			
+			return new PositionAndBearing(pos, bearing);
 		}
 		
+	}
+	
+	private double bearing(int node1Id, int node2Id) {
+		LatLng node1 = nodes[node1Id];
+		LatLng node2 = nodes[node2Id];
+		return CoordinateUtil.bearing(node1, node2);
 	}
 	
 	public Railway reversed() {
